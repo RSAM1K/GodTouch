@@ -5,9 +5,11 @@ Touch.app/
 
 # Собираются при ./scripts/build.sh
 vendor/spoofdpi
+vendor/touchcore
 vendor/tpws
 vendor/tg-proxy
 vendor/byedpi-src/
+touchcore/target/
 
 # Легаси / не используется
 vendor/wgcf

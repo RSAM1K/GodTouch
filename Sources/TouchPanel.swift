@@ -18,9 +18,18 @@ enum CRT {
 
 // MARK: - Panel
 
+enum PanelMetrics {
+    static let hMargin: CGFloat = 6
+    /// Same width as the hands frame + thin side margin (home and CFG match).
+    static var width: CGFloat { ArtSlot.outerWidth + hMargin * 2 }
+}
+
 struct TouchPanelView: View {
     @ObservedObject var engine: Engine
     @State private var showSettings = false
+    @State private var pingRows: [PingRow] = []
+    @State private var pingError: String?
+    @State private var pinging = false
 
     var body: some View {
         Group {
@@ -32,6 +41,8 @@ struct TouchPanelView: View {
                 mainPanel
             }
         }
+        .frame(width: PanelMetrics.width)
+        .fixedSize(horizontal: true, vertical: true)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -44,7 +55,6 @@ struct TouchPanelView: View {
             header
             screen
         }
-        .frame(width: 268)
         .background(CRT.panel)
     }
 
@@ -61,7 +71,7 @@ struct TouchPanelView: View {
                     .foregroundStyle(CRT.amberDim)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, PanelMetrics.hMargin)
         .padding(.top, 6)
         .padding(.bottom, 2)
         .background(CRT.black)
@@ -72,44 +82,104 @@ struct TouchPanelView: View {
             LinkTerminalArt(
                 connected: engine.isOn && !engine.busy,
                 busy: engine.busy,
-                engineLine: engine.engineStatusText,
-                servicesLine: engine.servicesStatusText
+                engineLine: engine.engineStatusText
             )
+            .transaction { $0.animation = nil }
 
             connectButton
 
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 CRTActionButton(title: "[ CFG ]", disabled: engine.busy) {
                     showSettings = true
                 }
-                CRTActionButton(title: "[ EXIT ]", disabled: false) {
+                CRTActionButton(
+                    title: pinging ? "[ … ]" : "[ PING ]",
+                    disabled: engine.busy || pinging
+                ) {
+                    runHomePing()
+                }
+                CRTActionButton(title: "[ QUIT ]", disabled: false) {
                     engine.turnOff()
                     NSApplication.shared.terminate(nil)
                 }
             }
 
-            if engine.needsTelegramSetup {
-                telegramRow
+            if !pingRows.isEmpty || pingError != nil {
+                homePingBlock
             }
 
-            if let err = engine.lastError, !err.isEmpty, !engine.needsTelegramSetup {
+            if let err = engine.lastError, !err.isEmpty {
                 Text("! \(err)")
                     .font(CRT.mono(8))
                     .foregroundStyle(Color.red.opacity(0.85))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                     .lineLimit(2)
             }
         }
-        .padding(.horizontal, 12)
+        .frame(width: ArtSlot.outerWidth)
+        .padding(.horizontal, PanelMetrics.hMargin)
         .padding(.top, 4)
-        .padding(.bottom, 10)
+        .padding(.bottom, 6)
         .background(CRT.black)
         .overlay {
             Rectangle()
                 .strokeBorder(CRT.amber.opacity(0.08), lineWidth: 1)
         }
-        .padding(.horizontal, 8)
-        .padding(.bottom, 8)
+        .padding(.horizontal, PanelMetrics.hMargin)
+        .padding(.bottom, 6)
+    }
+
+    private var homePingBlock: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if let pingError {
+                Text("! \(pingError)")
+                    .font(CRT.mono(8))
+                    .foregroundStyle(Color.red.opacity(0.85))
+            }
+            ForEach(pingRows) { row in
+                HStack(spacing: 6) {
+                    Text(row.label)
+                        .font(CRT.mono(8))
+                        .foregroundStyle(CRT.label)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer(minLength: 2)
+                    Text(row.latencyText)
+                        .font(CRT.mono(8, weight: .bold))
+                        .foregroundStyle(homePingColor(row))
+                    Text(row.mark)
+                        .font(CRT.mono(8, weight: .bold))
+                        .foregroundStyle(homePingColor(row))
+                        .frame(width: 10, alignment: .trailing)
+                }
+            }
+        }
+        .padding(6)
+        .background(CRT.amber.opacity(0.04))
+        .overlay {
+            RoundedRectangle(cornerRadius: 3)
+                .strokeBorder(CRT.amber.opacity(0.18), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 3))
+    }
+
+    private func homePingColor(_ row: PingRow) -> Color {
+        if row.skipped { return CRT.amberDim }
+        return row.ok ? CRT.phosphor : Color.red.opacity(0.85)
+    }
+
+    private func runHomePing() {
+        pinging = true
+        pingRows = []
+        pingError = nil
+        Task {
+            let result = await engine.pingServices()
+            await MainActor.run {
+                pingRows = result.rows
+                pingError = result.error
+                pinging = false
+            }
+        }
     }
 
     private var connectButton: some View {
@@ -125,25 +195,5 @@ struct TouchPanelView: View {
     private var buttonLabel: String {
         if engine.busy { return "[ ABORT ]" }
         return engine.isOn ? "[ DISCONNECT ]" : "[ CONNECT ]"
-    }
-
-    private var telegramRow: some View {
-        HStack {
-            Text("TG proxy pending")
-                .font(CRT.mono(8))
-                .foregroundStyle(CRT.label)
-            Spacer()
-            Button("OPEN") { engine.setupTelegramAgain() }
-                .buttonStyle(.plain)
-                .font(CRT.mono(8, weight: .bold))
-                .foregroundStyle(CRT.amber)
-        }
-        .padding(6)
-        .background(CRT.amber.opacity(0.06))
-        .overlay {
-            RoundedRectangle(cornerRadius: 3)
-                .strokeBorder(CRT.amber.opacity(0.2), lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 }

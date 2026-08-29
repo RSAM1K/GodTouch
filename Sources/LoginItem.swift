@@ -6,8 +6,10 @@ enum LoginItem {
         SMAppService.mainApp.status == .enabled
     }
 
+    /// Sync login-item with setting. Returns user-facing warning if enable failed.
     @discardableResult
     static func setEnabled(_ enabled: Bool) -> String? {
+        if enabled == isEnabled { return nil }
         do {
             if enabled {
                 try SMAppService.mainApp.register()
@@ -16,7 +18,13 @@ enum LoginItem {
             }
             return nil
         } catch {
-            return error.localizedDescription
+            if enabled {
+                return """
+                macOS не разрешил автозапуск. Открой Системные настройки → Основные → Объекты входа и добавь Touch вручную. \
+                У локальной сборки без подписи Apple эта кнопка часто недоступна — CONNECT при старте всё равно работает, если открыть приложение.
+                """
+            }
+            return nil
         }
     }
 }

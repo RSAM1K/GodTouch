@@ -12,6 +12,7 @@ struct TouchApp: App {
     var body: some Scene {
         MenuBarExtra {
             TouchPanelView(engine: engine)
+                .transaction { $0.animation = nil }
         } label: {
             MenuBarLabel(connected: engine.isOn)
         }

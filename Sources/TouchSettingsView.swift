@@ -42,8 +42,8 @@ struct TouchSettingsView: View {
             .frame(maxHeight: 300)
             footer
         }
-        .frame(width: 320)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: PanelMetrics.width)
+        .fixedSize(horizontal: true, vertical: true)
         .background(CRT.panel)
         .onAppear { reloadFromSettings() }
         .onChange(of: engine.profile) { _, p in
@@ -105,14 +105,18 @@ struct TouchSettingsView: View {
     private var autoModeBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let saved = TouchSettings.savedProfile(), TouchSettings.hasProbed {
-                Text("Сохранена: \(saved.title)")
+                Text(saved.title)
                     .font(CRT.mono(10, weight: .bold))
                     .foregroundStyle(CRT.amber)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             } else {
                 Text("Ещё не сканировали")
                     .font(CRT.mono(10))
                     .foregroundStyle(CRT.amberDim)
             }
+
+            scanTargetsPanel
 
             scanPingRow
 
@@ -133,6 +137,92 @@ struct TouchSettingsView: View {
         }
     }
 
+    private var scanTargetsPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            CRTActionButton(
+                title: engine.scanningAll
+                    ? "[ ALL \(engine.probeProgress) ]"
+                    : "[ ALL ]",
+                filled: engine.scanningAll,
+                disabled: engine.busy && !engine.scanningAll
+            ) {
+                errorText = nil
+                engine.scanAll()
+            }
+
+            HStack(spacing: 4) {
+                ForEach(ScanTargets.bundle) { target in
+                    scanTargetButton(target)
+                }
+            }
+        }
+        .padding(8)
+        .background(CRT.black)
+        .overlay { boxStroke }
+    }
+
+    private func scanTargetButton(_ target: ScanTarget) -> some View {
+        let active = engine.probing && engine.activeScanTargetId == target.id
+        let mark = engine.scanMark(for: target)
+        return Button {
+            errorText = nil
+            engine.scanForTarget(target)
+        } label: {
+            VStack(spacing: 2) {
+                Text("[\(target.tag)]")
+                    .font(CRT.mono(7.5, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(scanChipLabel(target: target, mark: mark, active: active))
+                    .font(CRT.mono(8, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
+            .foregroundStyle(scanChipColor(mark, active: active))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 5)
+            .background(CRT.amber.opacity(active ? 0.14 : 0.03))
+            .overlay {
+                RoundedRectangle(cornerRadius: 3)
+                    .strokeBorder(scanChipBorder(mark, active: active), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+        }
+        .buttonStyle(.plain)
+        .disabled(engine.busy && !active)
+    }
+
+    private func scanChipLabel(target: ScanTarget, mark: ScanMark, active: Bool) -> String {
+        if active { return "…" }
+        if let ms = engine.scanLatencies[target.id] { return "\(ms)ms" }
+        switch mark {
+        case .idle: return "SCAN"
+        case .testing: return "…"
+        case .ok: return "✓"
+        case .fail: return "✗"
+        }
+    }
+
+    private func scanChipColor(_ mark: ScanMark, active: Bool) -> Color {
+        if active { return CRT.amber }
+        switch mark {
+        case .idle: return CRT.amberDim
+        case .testing: return CRT.amber
+        case .ok: return CRT.phosphor
+        case .fail: return Color.red.opacity(0.85)
+        }
+    }
+
+    private func scanChipBorder(_ mark: ScanMark, active: Bool) -> Color {
+        if active { return CRT.amber.opacity(0.85) }
+        switch mark {
+        case .idle: return CRT.amber.opacity(0.25)
+        case .testing: return CRT.amber.opacity(0.55)
+        case .ok: return CRT.phosphor.opacity(0.55)
+        case .fail: return Color.red.opacity(0.45)
+        }
+    }
+
     private var pingList: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(pingRows) { row in
@@ -140,6 +230,8 @@ struct TouchSettingsView: View {
                     Text(row.label)
                         .font(CRT.mono(9))
                         .foregroundStyle(CRT.label)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     Spacer(minLength: 4)
                     Text(row.latencyText)
                         .font(CRT.mono(9, weight: .bold))
@@ -163,46 +255,49 @@ struct TouchSettingsView: View {
         return row.ok ? CRT.phosphor : Color.red.opacity(0.85)
     }
 
+    private var probeProfile: DPIProfile {
+        if mode == .manual { return manualProfile }
+        return TouchSettings.savedProfile() ?? engine.profile
+    }
+
+    private var probeArguments: [String]? {
+        guard mode == .manual else { return nil }
+        let line = argsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { return nil }
+        return DPIProfile.parseArgumentsLine(line, backend: manualProfile.backend)
+    }
+
     private var scanPingRow: some View {
-        HStack(spacing: 6) {
-            CRTActionButton(
-                title: engine.probing ? "[ SCAN \(engine.probeProgress) ]" : "[ SCAN ]",
-                filled: engine.probing,
-                disabled: engine.busy && !engine.probing
-            ) {
-                errorText = nil
-                engine.reprobeStrategies()
-            }
-            CRTActionButton(
-                title: pinging ? "[ PING … ]" : "[ PING ]",
-                disabled: engine.busy || pinging
-            ) {
-                pinging = true
-                pingRows = []
-                pingError = nil
-                Task {
-                    let rows = await engine.pingServices()
-                    await MainActor.run {
-                        if rows.isEmpty {
-                            pingError = "Сначала CONNECT"
-                        } else {
-                            pingRows = rows
-                        }
-                        pinging = false
-                    }
+        CRTActionButton(
+            title: pinging ? "[ PING … ]" : "[ PING ]",
+            disabled: engine.busy || pinging
+        ) {
+            pinging = true
+            pingRows = []
+            pingError = nil
+            Task {
+                let result = await engine.pingServices(
+                    profile: probeProfile,
+                    arguments: probeArguments
+                )
+                await MainActor.run {
+                    pingRows = result.rows
+                    pingError = result.error
+                    pinging = false
                 }
             }
         }
     }
 
     private var systemSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             sectionTitle("СИСТЕМА")
 
             CRTToggle(label: "Запуск при входе", isOn: $launchAtLogin)
             CRTToggle(label: "CONNECT при старте", isOn: $autoConnect)
         }
-        .padding(8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .background(CRT.black)
         .overlay { boxStroke }
     }
@@ -235,13 +330,20 @@ struct TouchSettingsView: View {
             ForEach(SpoofDPIStrategy.allCases) { s in
                 profileRow(DPIProfile(backend: .spoofdpi, strategyId: s.rawValue))
             }
+
+            Text("TOUCHCORE")
+                .font(CRT.mono(10, weight: .bold))
+                .foregroundStyle(CRT.amberDim)
+                .padding(.top, 4)
+            ForEach(TouchCoreStrategy.allCases) { s in
+                profileRow(DPIProfile(backend: .touchcore, strategyId: s.rawValue))
+            }
         }
     }
 
     private var configSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionTitle(manualProfile.backend == .tpws ? "TPWS ФЛАГИ"
-                         : manualProfile.backend == .ciadpi ? "CIADPI ФЛАГИ" : "SPOOFDPI ФЛАГИ")
+            sectionTitle(flagsSectionTitle)
 
             TextEditor(text: $argsText)
                 .font(CRT.mono(10))
@@ -252,17 +354,31 @@ struct TouchSettingsView: View {
                 .background(CRT.black)
                 .overlay { boxStroke }
 
-            Text(manualProfile.backend == .tpws
-                 ? "--split-pos=1 --tlsrec=midsld"
-                 : manualProfile.backend == .ciadpi
-                 ? "-d 1+s  или  -r 1+s"
-                 : "--https-chunk-size 1")
+            Text(flagsHint)
                 .font(CRT.mono(9))
                 .foregroundStyle(CRT.amberDim)
         }
         .padding(8)
         .background(CRT.black)
         .overlay { boxStroke }
+    }
+
+    private var flagsSectionTitle: String {
+        switch manualProfile.backend {
+        case .tpws: return "TPWS ФЛАГИ"
+        case .ciadpi: return "CIADPI ФЛАГИ"
+        case .spoofdpi: return "SPOOFDPI ФЛАГИ"
+        case .touchcore: return "TOUCHCORE ФЛАГИ"
+        }
+    }
+
+    private var flagsHint: String {
+        switch manualProfile.backend {
+        case .tpws: return "--split-pos=1 --tlsrec=midsld"
+        case .ciadpi: return "-d 1+s  или  -r 1+s"
+        case .spoofdpi: return "--https-chunk-size 1"
+        case .touchcore: return "--split-pos sni,midsld --disorder --tlsrec midsld"
+        }
     }
 
     private var footer: some View {
@@ -307,8 +423,8 @@ struct TouchSettingsView: View {
 
         TouchSettings.launchAtLogin = launchAtLogin
         TouchSettings.autoConnect = autoConnect
-        if let err = LoginItem.setEnabled(launchAtLogin) {
-            warnings.append("Автозапуск: \(err)")
+        if launchAtLogin != LoginItem.isEnabled, let err = LoginItem.setEnabled(launchAtLogin) {
+            warnings.append(err)
         }
 
         do {
@@ -384,7 +500,7 @@ struct CRTToggle: View {
                     .font(CRT.mono(9, weight: .bold))
                     .foregroundStyle(isOn ? CRT.black : CRT.amber)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 3)
                     .background(isOn ? CRT.amber.opacity(0.9) : CRT.black)
                     .overlay {
                         RoundedRectangle(cornerRadius: 3)

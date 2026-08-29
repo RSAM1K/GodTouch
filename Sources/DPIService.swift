@@ -7,6 +7,7 @@ final class DPIService {
     private let tpwsBinary: URL
     private let ciadpiBinary: URL
     private let spoofdpiBinary: URL
+    private let touchcoreBinary: URL
     private(set) var activeBackend: DPIBackend?
     let port = 1080
 
@@ -14,17 +15,30 @@ final class DPIService {
         self.tpwsBinary = resourceDir.appendingPathComponent("tpws")
         self.ciadpiBinary = resourceDir.appendingPathComponent("ciadpi")
         self.spoofdpiBinary = resourceDir.appendingPathComponent("spoofdpi")
+        self.touchcoreBinary = resourceDir.appendingPathComponent("touchcore")
     }
 
     var isRunning: Bool { process?.isRunning == true }
 
-    func start(profile: DPIProfile) throws {
-        try start(backend: profile.backend, arguments: TouchSettings.effectiveArguments(for: profile))
+    private func backendWarmup(probeMode: Bool, backend: DPIBackend) -> TimeInterval {
+        switch backend {
+        case .touchcore:
+            return probeMode ? 0.28 : 0.45
+        case .spoofdpi:
+            return probeMode ? 0.2 : 0.4
+        default:
+            return probeMode ? 0.15 : 0.35
+        }
     }
 
-    func start(backend: DPIBackend, arguments: [String]) throws {
-        stop()
-        try waitUntilPortFree(timeout: 2)
+    func start(profile: DPIProfile, probeMode: Bool = false, argumentsOverride: [String]? = nil) throws {
+        let args = argumentsOverride ?? TouchSettings.effectiveArguments(for: profile)
+        try start(backend: profile.backend, arguments: args, probeMode: probeMode)
+    }
+
+    func start(backend: DPIBackend, arguments: [String], probeMode: Bool = false) throws {
+        stop(portWait: probeMode ? 0.35 : 1.2)
+        try waitUntilPortFree(timeout: probeMode ? 0.5 : 2)
 
         let binary: URL
         let baseArgs: [String]
@@ -49,6 +63,10 @@ final class DPIService {
                 "--auto-configure-network=false"
             ]
             errName = "touch-spoofdpi.err"
+        case .touchcore:
+            binary = touchcoreBinary
+            baseArgs = ["--listen", "127.0.0.1:\(port)"]
+            errName = "touch-touchcore.err"
         }
 
         guard FileManager.default.isExecutableFile(atPath: binary.path) else {
@@ -74,7 +92,7 @@ final class DPIService {
         try p.run()
         process = p
         activeBackend = backend
-        Thread.sleep(forTimeInterval: 0.35)
+        Thread.sleep(forTimeInterval: probeMode ? backendWarmup(probeMode: true, backend: backend) : backendWarmup(probeMode: false, backend: backend))
         if !p.isRunning {
             let err = (try? String(contentsOf: errURL, encoding: .utf8))?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -85,14 +103,14 @@ final class DPIService {
         }
     }
 
-    func stop() {
+    func stop(portWait: TimeInterval = 1.2) {
         Proc.forceKill(process)
         process = nil
         activeBackend = nil
         for pid in listeningPIDs() {
             kill(pid, SIGKILL)
         }
-        _ = waitUntilPortFreeQuiet(timeout: 1.2)
+        _ = waitUntilPortFreeQuiet(timeout: portWait)
     }
 
     private func listeningPIDs() -> [Int32] {

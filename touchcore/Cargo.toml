@@ -1,0 +1,30 @@
+[package]
+name = "touchcore"
+version = "0.1.0"
+edition = "2021"
+description = "God Touch native DPI engine — SOCKS5 + TLS tamper (tpws techniques, macOS)"
+license = "MIT"
+
+[lib]
+name = "touchcore"
+path = "src/lib.rs"
+
+[[bin]]
+name = "touchcore"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+libc = "0.2"
+socket2 = { version = "0.5", features = ["all"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"

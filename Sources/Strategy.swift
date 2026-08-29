@@ -86,6 +86,9 @@ enum TouchSettings {
         if let raw = UserDefaults.standard.string(forKey: profileKey),
            let data = raw.data(using: .utf8),
            let profile = try? JSONDecoder().decode(DPIProfile.self, from: data) {
+            if raw.contains("touchdpi") {
+                save(profile: profile)
+            }
             return profile
         }
         if let legacy = savedStrategyLegacy() {
@@ -141,8 +144,12 @@ enum TouchSettings {
 
     static var customBackend: DPIBackend {
         get {
-            guard let raw = UserDefaults.standard.string(forKey: customBackendKey),
-                  let b = DPIBackend(rawValue: raw) else { return .tpws }
+            guard let raw = UserDefaults.standard.string(forKey: customBackendKey) else { return .tpws }
+            if raw == "touchdpi" {
+                UserDefaults.standard.set(DPIBackend.touchcore.rawValue, forKey: customBackendKey)
+                return .touchcore
+            }
+            guard let b = DPIBackend(rawValue: raw) else { return .tpws }
             return b
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: customBackendKey) }

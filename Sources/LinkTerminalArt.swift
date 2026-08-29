@@ -4,12 +4,13 @@ import SwiftUI
 // MARK: - CRT terminal (reference: dither hands fill the art frame)
 
 enum ArtSlot {
-    /// Visible art area inside LinkTerminalArt (points @1x).
-    static let width: CGFloat = 212
-    static let height: CGFloat = 96
-    /// Recommended PNG size @2x for Retina.
-    static let pngWidth = 424
-    static let pngHeight = 192
+    /// Visible art area inside the main panel.
+    static let width: CGFloat = 204
+    static let height: CGFloat = 88
+    static let pngWidth = 392
+    static let pngHeight = 176
+    /// Black terminal frame around the art (padding 8pt each side).
+    static var outerWidth: CGFloat { width + 16 }
 }
 
 private typealias Terminal = CRT
@@ -18,7 +19,6 @@ struct LinkTerminalArt: View {
     let connected: Bool
     let busy: Bool
     var engineLine: String = ""
-    var servicesLine: String = ""
 
     @State private var flicker = false
     @State private var spark = false
@@ -31,16 +31,17 @@ struct LinkTerminalArt: View {
             footerRow
         }
         .padding(8)
+        .frame(width: ArtSlot.width + 16, alignment: .leading)
         .background(Terminal.black)
         .overlay(border)
         .overlay(scanlines.allowsHitTesting(false))
-        .animation(.easeInOut(duration: 0.4), value: connected)
         .onChange(of: connected) { _, on in
             if on { burstSpark() }
         }
         .onAppear { startEffects() }
         .onChange(of: busy) { _, _ in startEffects() }
         .opacity(busy && flicker ? 0.85 : 1)
+        .animation(.easeInOut(duration: 0.2), value: busy && flicker)
     }
 
     // MARK: chrome
@@ -77,9 +78,11 @@ struct LinkTerminalArt: View {
 
             handsLayer("hands-off")
                 .opacity(connected ? 0 : 1)
+                .animation(.easeInOut(duration: 0.25), value: connected)
 
             handsLayer("hands-on")
                 .opacity(connected ? 1 : 0)
+                .animation(.easeInOut(duration: 0.25), value: connected)
 
             artScanlines
 
@@ -126,22 +129,15 @@ struct LinkTerminalArt: View {
                 Text("]")
                 blockCursor
             }
-            if !engineLine.isEmpty {
-                Text(engineLine)
-                    .foregroundStyle(Terminal.amberDim)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-            }
-            if !servicesLine.isEmpty {
-                Text(servicesLine)
-                    .foregroundStyle(Terminal.amberDim)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-            }
+            Text(engineLine.isEmpty ? " " : engineLine)
+                .foregroundStyle(Terminal.amberDim)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
         }
         .font(Terminal.mono(7.5, weight: .bold))
         .foregroundStyle(Terminal.amber)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 28)
         .padding(.top, 4)
     }
 

@@ -1,65 +1,129 @@
 import Foundation
 
-struct ProbeResult: Sendable {
+struct TargetProbeResult: Sendable {
     let profile: DPIProfile
-    let youtubeOK: Bool
-    let googleOK: Bool
+    let target: ScanTarget
     let latencyMs: Int
+}
 
-    var allOK: Bool { youtubeOK && googleOK }
+struct BundleProbeResult: Sendable {
+    let profile: DPIProfile
+    let services: [ServiceProbe]
+
+    /// How many targets (DS/YT/TW/DBD) respond through this profile.
+    var passCount: Int { services.filter(\.ok).count }
+    /// Worst latency among working targets — used to compare profiles fairly.
+    var latencyMs: Int {
+        let hits = services.filter(\.ok).map(\.ms)
+        return hits.isEmpty ? Int.max : hits.max()!
+    }
+
+    /// More working resources wins; tie → lower max latency.
+    func better(than other: BundleProbeResult) -> Bool {
+        if passCount != other.passCount { return passCount > other.passCount }
+        return latencyMs < other.latencyMs
+    }
 }
 
 enum StrategyProbe {
-    private static let youtubeURL = "https://www.youtube.com/generate_204"
-    private static let googleURL = "https://www.google.com/generate_204"
+    private static let probeTimeout = 6
+    private static let connectTimeout = 4
 
-    /// Try every backend × strategy; return the fastest working profile.
+    /// Single resource: scan every profile, pick lowest latency (not the first hit).
     static func findBest(
+        for target: ScanTarget,
         dpi: DPIService,
-        onProgress: @escaping @Sendable (DPIProfile, Int, Int) -> Void
-    ) -> ProbeResult? {
-        var working: [ProbeResult] = []
-        let all = DPIProfile.allProfiles()
+        onProgress: @escaping @Sendable (DPIProfile, Int, Int, ServiceProbe?) -> Void
+    ) -> TargetProbeResult? {
+        let all = profileList()
+        var best: TargetProbeResult?
+
         for (index, profile) in all.enumerated() {
-            onProgress(profile, index + 1, all.count)
-            dpi.stop()
+            dpi.stop(portWait: 0.35)
             do {
-                try dpi.start(backend: profile.backend, arguments: profile.arguments)
+                try dpi.start(profile: profile, probeMode: true)
             } catch {
+                onProgress(profile, index + 1, all.count, nil)
                 continue
             }
-            Thread.sleep(forTimeInterval: 0.2)
-            if let result = probeCurrent(dpi: dpi, profile: profile), result.allOK {
-                working.append(result)
+
+            let hit = probeTarget(dpi: dpi, target: target)
+            onProgress(profile, index + 1, all.count, hit)
+
+            guard hit.ok else { continue }
+            let entry = TargetProbeResult(profile: profile, target: target, latencyMs: hit.ms)
+            if let current = best {
+                if entry.latencyMs < current.latencyMs { best = entry }
+            } else {
+                best = entry
             }
         }
+
         dpi.stop()
-        return working.min(by: { $0.latencyMs < $1.latencyMs })
+        return best
     }
 
-    static func probeCurrent(dpi: DPIService, profile: DPIProfile) -> ProbeResult? {
-        guard dpi.isRunning else { return nil }
-        let yt = curlTest(url: youtubeURL, port: dpi.port)
-        let g = curlTest(url: googleURL, port: dpi.port)
-        let latency = max(yt.ms, g.ms)
-        return ProbeResult(
-            profile: profile,
-            youtubeOK: yt.ok,
-            googleOK: g.ok,
-            latencyMs: latency
+    /// All resources: scan every profile; most working wins, then lowest max latency.
+    static func findBestOverall(
+        dpi: DPIService,
+        onProgress: @escaping @Sendable (DPIProfile, Int, Int, [ServiceProbe]) -> Void
+    ) -> BundleProbeResult? {
+        let all = profileList()
+        var best: BundleProbeResult?
+
+        for (index, profile) in all.enumerated() {
+            dpi.stop(portWait: 0.35)
+            do {
+                try dpi.start(profile: profile, probeMode: true)
+            } catch {
+                onProgress(profile, index + 1, all.count, [])
+                continue
+            }
+
+            let services = probeAll(dpi: dpi)
+            onProgress(profile, index + 1, all.count, services)
+
+            let result = BundleProbeResult(profile: profile, services: services)
+            guard result.passCount > 0 else { continue }
+
+            if let current = best {
+                if result.better(than: current) { best = result }
+            } else {
+                best = result
+            }
+        }
+
+        dpi.stop()
+        return best
+    }
+
+    private static func profileList() -> [DPIProfile] {
+        let priority = DPIProfile.scanProfiles()
+        let fallback = DPIProfile.scanFallbackProfiles(excluding: priority)
+        return priority + fallback
+    }
+
+    static func probeAll(dpi: DPIService) -> [ServiceProbe] {
+        ScanTargets.probe(
+            port: dpi.port,
+            timeout: probeTimeout,
+            connectTimeout: connectTimeout
         )
     }
 
-    private static func curlTest(url: String, port: Int, timeout: Int = 8) -> (ok: Bool, ms: Int) {
-        let out = SystemProxy.shell("""
-        curl -sS -o /dev/null -w '%{http_code} %{time_total}' --max-time \(timeout) \
-          --socks5-hostname 127.0.0.1:\(port) '\(url)' 2>/dev/null
-        """).trimmingCharacters(in: .whitespacesAndNewlines)
-        let parts = out.split(separator: " ")
-        guard parts.count >= 2, let code = Int(parts[0]), let sec = Double(parts[1]) else {
-            return (false, Int.max)
-        }
-        let ok = (200...399).contains(code)
-        return (ok, Int(sec * 1000))
+    static func probeTarget(dpi: DPIService, target: ScanTarget) -> ServiceProbe {
+        let r = ScanTargets.curlTest(
+            url: target.url,
+            port: dpi.port,
+            timeout: probeTimeout,
+            connectTimeout: connectTimeout,
+            headOnly: target.headOnly
+        )
+        return ServiceProbe(target: target, ok: r.ok, ms: r.ms)
+    }
+
+    static func quickCheck(dpi: DPIService) -> Bool {
+        guard dpi.isRunning else { return false }
+        return ScanTargets.quickProbe(port: dpi.port)
     }
 }

@@ -1,6 +1,13 @@
 import Foundation
 import Combine
 
+enum ScanMark: Equatable {
+    case idle
+    case testing
+    case ok
+    case fail
+}
+
 @MainActor
 final class Engine: ObservableObject {
     @Published var isOn = false
@@ -10,6 +17,9 @@ final class Engine: ObservableObject {
     @Published var lastError: String?
     @Published var probing = false
     @Published var probeProgress = ""
+    @Published var scanMarks: [String: ScanMark] = [:]
+    @Published var scanLatencies: [String: Int] = [:]
+    @Published var activeScanTargetId: String?
     @Published var needsTelegramSetup = false
     @Published var telegramUp = false
 
@@ -26,6 +36,8 @@ final class Engine: ObservableObject {
         self.telegram = TelegramService(binary: res.appendingPathComponent("tg-proxy"))
         if let saved = TouchSettings.savedProfile() {
             profile = saved
+        } else {
+            profile = .default
         }
         startWatchdog()
         Task { await self.healOrphanPAC() }
@@ -55,17 +67,82 @@ final class Engine: ObservableObject {
         return "ENG: —"
     }
 
-    var servicesStatusText: String {
-        telegramUp ? "TG ✓" : "TG —"
+    func scanMark(for target: ScanTarget) -> ScanMark {
+        scanMarks[target.id] ?? .idle
     }
 
-    func pingServices() async -> [PingRow] {
-        let dpiPort = dpi.port
+    var scanningAll: Bool {
+        probing && activeScanTargetId == ScanTargets.allScanId
+    }
+
+    private func resetScanMarks(testing: Bool = false) {
+        scanMarks = Dictionary(
+            uniqueKeysWithValues: ScanTargets.bundle.map {
+                ($0.id, testing ? ScanMark.testing : ScanMark.idle)
+            }
+        )
+    }
+
+    private func applyScanHit(_ targetId: String, hit: ServiceProbe?) {
+        guard let hit else {
+            scanMarks[targetId] = .fail
+            return
+        }
+        scanMarks[targetId] = hit.ok ? .ok : .fail
+        if hit.ok {
+            scanLatencies[targetId] = hit.ms
+        }
+    }
+
+    func pingServices(profile: DPIProfile? = nil, arguments: [String]? = nil) async -> (rows: [PingRow], error: String?) {
+        let wasConnected = isOn
+        let probeProfile = profile ?? (wasConnected ? self.profile : activeProfileForProbe())
+        let probeArgs = arguments ?? TouchSettings.effectiveArguments(for: probeProfile)
+        let restoreProfile = wasConnected ? self.profile : nil
+        let restoreArgs = TouchSettings.effectiveArguments(for: restoreProfile ?? probeProfile)
+
+        dpi.stop(portWait: 0.35)
+        do {
+            try dpi.start(profile: probeProfile, probeMode: true, argumentsOverride: probeArgs)
+            let warmup: UInt64 = probeProfile.backend == .touchcore
+                ? 450_000_000
+                : 220_000_000
+            try await Task.sleep(nanoseconds: warmup)
+        } catch {
+            dpi.stop()
+            if let restoreProfile, wasConnected {
+                try? dpi.start(profile: restoreProfile, argumentsOverride: restoreArgs)
+            }
+            return ([], error.localizedDescription)
+        }
+
         let tgPort = telegram.isRunning ? telegram.port : nil
-        guard dpi.isRunning else { return [] }
-        return await Task.detached {
-            ConnectivityTest.run(dpiPort: dpiPort, telegramPort: tgPort)
+        let longProbe = probeProfile.backend == .touchcore
+        let rows = await Task.detached { [dpi, tgPort, longProbe] in
+            ConnectivityTest.run(
+                dpiPort: dpi.port,
+                telegramPort: tgPort,
+                timeout: longProbe ? 7 : 5,
+                connectTimeout: longProbe ? 4 : 4
+            )
         }.value
+
+        dpi.stop(portWait: 0.35)
+        if let restoreProfile, wasConnected {
+            try? dpi.start(profile: restoreProfile, argumentsOverride: restoreArgs)
+        }
+
+        return (rows, nil)
+    }
+
+    private func activeProfileForProbe() -> DPIProfile {
+        if TouchSettings.strategyMode == .manual {
+            return TouchSettings.savedProfile() ?? profile
+        }
+        if let saved = TouchSettings.savedProfile() {
+            return saved
+        }
+        return profile
     }
 
     private func startWatchdog() {
@@ -91,9 +168,11 @@ final class Engine: ObservableObject {
         let profile = self.profile
         do {
             try dpi.start(profile: profile)
+            try telegram.start()
             try pac.start(pacScript: pacBody)
             isOn = true
             status = statusLine(profile: profile)
+            telegramUp = telegram.isRunning
         } catch {
             lastError = error.localizedDescription
             status = "Ошибка"
@@ -124,17 +203,134 @@ final class Engine: ObservableObject {
         lastError = "Отменено"
     }
 
-    func reprobeStrategies() {
-        guard !busy else { return }
-        TouchSettings.clearProbe()
+    private func applyScanServices(_ services: [ServiceProbe]) {
+        for service in services {
+            applyScanHit(service.targetId, hit: service)
+        }
+    }
+
+    private func finishScan(
+        gen: Int,
+        profile: DPIProfile,
+        reconnect: Bool,
+        statusLine: String
+    ) {
+        guard gen == generation else { return }
+        probing = false
+        busy = false
+        activeScanTargetId = nil
+        probeProgress = ""
         TouchSettings.strategyMode = .auto
-        if isOn {
-            turnOff()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-                self?.turnOn(forceProbe: true)
+        TouchSettings.save(profile: profile)
+        self.profile = profile
+        lastError = nil
+        status = statusLine
+        if reconnect {
+            reconnectIfOn()
+        }
+    }
+
+    func scanAll() {
+        guard !busy else { return }
+
+        generation += 1
+        let gen = generation
+        busy = true
+        probing = true
+        lastError = nil
+        activeScanTargetId = ScanTargets.allScanId
+        probeProgress = ""
+        resetScanMarks(testing: true)
+        status = "SCAN ALL…"
+
+        let reconnect = isOn
+
+        Task.detached { [dpi] in
+            let best = StrategyProbe.findBestOverall(dpi: dpi) { profile, current, total, services in
+                Task { @MainActor in
+                    guard gen == self.generation else { return }
+                    self.probeProgress = "\(current)/\(total)"
+                    self.status = "ALL · \(profile.shortTitle)"
+                    self.applyScanServices(services)
+                }
             }
-        } else {
-            turnOn(forceProbe: true)
+
+            dpi.stop()
+
+            await MainActor.run {
+                guard gen == self.generation else { return }
+                guard let best else {
+                    self.probing = false
+                    self.busy = false
+                    self.activeScanTargetId = nil
+                    self.probeProgress = ""
+                    self.lastError = "Нет рабочей стратегии"
+                    self.status = "Ошибка"
+                    return
+                }
+
+                let line = "ALL \(best.passCount)/\(best.services.count) · \(best.profile.shortTitle) · \(best.latencyMs)ms"
+                self.finishScan(
+                    gen: gen,
+                    profile: best.profile,
+                    reconnect: reconnect,
+                    statusLine: line
+                )
+            }
+        }
+    }
+
+    func scanForTarget(_ target: ScanTarget) {
+        guard !busy else { return }
+
+        generation += 1
+        let gen = generation
+        busy = true
+        probing = true
+        lastError = nil
+        activeScanTargetId = target.id
+        probeProgress = ""
+        resetScanMarks()
+        scanMarks[target.id] = .testing
+        scanLatencies.removeValue(forKey: target.id)
+        status = "SCAN \(target.tag)…"
+
+        let reconnect = isOn
+
+        Task.detached { [dpi] in
+            let best = StrategyProbe.findBest(for: target, dpi: dpi) { profile, current, total, hit in
+                Task { @MainActor in
+                    guard gen == self.generation else { return }
+                    self.probeProgress = "\(current)/\(total)"
+                    self.status = "\(target.tag) · \(profile.shortTitle)"
+                    self.applyScanHit(target.id, hit: hit)
+                }
+            }
+
+            dpi.stop()
+
+            await MainActor.run {
+                guard gen == self.generation else { return }
+                guard let best else {
+                    self.probing = false
+                    self.busy = false
+                    self.activeScanTargetId = nil
+                    self.probeProgress = ""
+                    self.scanMarks[target.id] = .fail
+                    self.lastError = "Нет стратегии для \(target.tag)"
+                    self.status = "Ошибка"
+                    return
+                }
+
+                self.scanMarks[target.id] = .ok
+                self.scanLatencies[target.id] = best.latencyMs
+                self.finishScan(
+                    gen: gen,
+                    profile: best.profile,
+                    reconnect: reconnect,
+                    statusLine: "\(target.tag) · \(best.profile.shortTitle) · \(best.latencyMs)ms"
+                )
+            }
         }
     }
 
@@ -143,7 +339,7 @@ final class Engine: ObservableObject {
         if !telegram.isRunning, isOn {
             try? telegram.start()
         }
-        telegram.offerProxyToTelegram()
+        telegram.offerProxyToTelegram(force: true)
         needsTelegramSetup = true
     }
 
@@ -181,10 +377,9 @@ final class Engine: ObservableObject {
         needsTelegramSetup = false
         generation += 1
         let gen = generation
-        let mode = TouchSettings.strategyMode
-        let needsProbe = forceProbe || (mode == .auto && !TouchSettings.hasProbed)
         let domains = HostLists.load(from: resourceDir)
         let pacBody = HostLists.pacScript(domains: domains, socksPort: dpi.port)
+        _ = forceProbe
 
         Task.detached { [dpi, telegram, pac] in
             var chosen = await MainActor.run { self.profile }
@@ -192,28 +387,8 @@ final class Engine: ObservableObject {
                 chosen = saved
             }
             do {
-                if needsProbe {
-                    await Self.setProbing(self, gen, true, "Подбор…")
-                    let best = StrategyProbe.findBest(dpi: dpi) { profile, current, total in
-                        Task { @MainActor in
-                            guard gen == self.generation else { return }
-                            self.probeProgress = "\(current)/\(total)"
-                            self.status = profile.shortTitle
-                        }
-                    }
-                    await Self.setProbing(self, gen, false, "")
-                    guard let best else {
-                        throw NSError(domain: "Touch", code: 10, userInfo: [
-                            NSLocalizedDescriptionKey: "Не нашёл рабочую стратегию"
-                        ])
-                    }
-                    chosen = best.profile
-                    TouchSettings.save(profile: chosen)
-                    try dpi.start(profile: chosen)
-                } else {
-                    await Self.setStatus(self, gen, "Запуск…")
-                    try dpi.start(profile: chosen)
-                }
+                await Self.setStatus(self, gen, "Запуск…")
+                chosen = try DPIFallback.startForConnect(dpi: dpi, profile: chosen)
 
                 try pac.start(pacScript: pacBody)
                 await Self.setStatus(self, gen, "Пароль Mac…")
@@ -221,11 +396,9 @@ final class Engine: ObservableObject {
 
                 await Self.setStatus(self, gen, "Telegram…")
                 try telegram.start()
-                let offerTG = !TouchSettings.telegramProxyOffered
+                TouchSettings.resetTelegramProxyOffer()
                 await MainActor.run {
-                    if offerTG {
-                        telegram.offerProxyToTelegram()
-                    }
+                    telegram.offerProxyToTelegram(force: true)
                 }
 
                 let finalProfile = chosen
@@ -236,7 +409,7 @@ final class Engine: ObservableObject {
                     self.busy = false
                     self.probing = false
                     self.probeProgress = ""
-                    self.needsTelegramSetup = offerTG
+                    self.needsTelegramSetup = true
                     self.telegramUp = telegram.isRunning
                     self.lastError = nil
                     self.status = self.statusLine(profile: finalProfile)

@@ -25,13 +25,28 @@ final class TelegramService {
             ])
         }
 
-        let errURL = FileManager.default.temporaryDirectory.appendingPathComponent("touch-tg-proxy.err")
+        let errURL = URL(fileURLWithPath: "/tmp/touch-tg-proxy.err")
         try? FileManager.default.removeItem(at: errURL)
         FileManager.default.createFile(atPath: errURL.path, contents: nil)
 
         let p = Process()
         p.executableURL = binary
-        p.arguments = ["--host", "127.0.0.1", "--port", String(port)]
+        p.environment = [
+            "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+            "RUST_LOG": "info",
+        ]
+        p.arguments = [
+            "--host", "127.0.0.1",
+            "--port", String(port),
+            "--dc-ip", "1:149.154.175.50",
+            "--dc-ip", "2:149.154.167.220",
+            "--dc-ip", "3:149.154.175.100",
+            "--dc-ip", "4:149.154.167.91",
+            "--dc-ip", "5:91.108.56.100",
+            "--pool-size", "8",
+            "--connect-timeout", "15",
+            "--pool-max-age", "180",
+        ]
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle(forWritingAtPath: errURL.path)
         try p.run()
@@ -55,9 +70,9 @@ final class TelegramService {
         _ = waitUntilPortFreeQuiet(timeout: 1.0)
     }
 
-    /// Opens Telegram once to offer SOCKS proxy via deep link.
-    func offerProxyToTelegram() {
-        guard !TouchSettings.telegramProxyOffered else { return }
+    /// Opens Telegram to apply SOCKS proxy via deep link.
+    func offerProxyToTelegram(force: Bool = false) {
+        if !force, TouchSettings.telegramProxyOffered { return }
         let url = URL(string: "tg://socks?server=127.0.0.1&port=\(port)")!
         NSWorkspace.shared.open(url)
         TouchSettings.markTelegramProxyOffered()
