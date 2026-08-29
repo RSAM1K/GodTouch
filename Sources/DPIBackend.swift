@@ -1,0 +1,151 @@
+import Foundation
+
+enum DPIBackend: String, CaseIterable, Identifiable, Codable {
+    case tpws
+    case ciadpi
+    case spoofdpi
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .tpws: return "tpws"
+        case .ciadpi: return "ciadpi"
+        case .spoofdpi: return "spoofdpi"
+        }
+    }
+
+    var binaryName: String { rawValue }
+}
+
+/// ByeDPI / ciadpi strategies for macOS SOCKS mode.
+enum CiadpiStrategy: String, CaseIterable, Identifiable, Codable {
+    case disorder1
+    case disorderSni
+    case split1
+    case tlsrecSni
+    case oobSni
+    case splitDisorder
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .disorder1: return "disorder-1"
+        case .disorderSni: return "disorder-sni"
+        case .split1: return "split-1"
+        case .tlsrecSni: return "tlsrec-sni"
+        case .oobSni: return "oob-sni"
+        case .splitDisorder: return "split+disorder"
+        }
+    }
+
+    var arguments: [String] {
+        switch self {
+        case .disorder1: return ["-d", "1"]
+        case .disorderSni: return ["-d", "1+s"]
+        case .split1: return ["-s", "1"]
+        case .tlsrecSni: return ["-r", "1+s"]
+        case .oobSni: return ["-o", "1+s"]
+        case .splitDisorder: return ["-s", "1", "-d", "1"]
+        }
+    }
+}
+
+/// SpoofDPI strategies (TLS ClientHello fragmentation).
+enum SpoofDPIStrategy: String, CaseIterable, Identifiable, Codable {
+    case chunk1
+    case chunk2
+    case chunk3
+    case chunk1Fake
+    case splitSni
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .chunk1: return "chunk-1"
+        case .chunk2: return "chunk-2"
+        case .chunk3: return "chunk-3"
+        case .chunk1Fake: return "chunk-1+fake"
+        case .splitSni: return "split-sni"
+        }
+    }
+
+    var arguments: [String] {
+        switch self {
+        case .chunk1:
+            return ["--https-split-default", "chunk", "--https-chunk-size", "1"]
+        case .chunk2:
+            return ["--https-split-default", "chunk", "--https-chunk-size", "2"]
+        case .chunk3:
+            return ["--https-split-default", "chunk", "--https-chunk-size", "3"]
+        case .chunk1Fake:
+            return [
+                "--https-split-default", "chunk", "--https-chunk-size", "1",
+                "--https-fake-count", "1"
+            ]
+        case .splitSni:
+            return ["--https-split-default", "sni"]
+        }
+    }
+}
+
+struct DPIProfile: Codable, Identifiable, Equatable, Hashable {
+    let backend: DPIBackend
+    let strategyId: String
+
+    var id: String { "\(backend.rawValue):\(strategyId)" }
+
+    var title: String {
+        if let s = zapretStrategy { return "\(backend.title) · \(s.title)" }
+        if let s = ciadpiStrategy { return "\(backend.title) · \(s.title)" }
+        if let s = spoofdpiStrategy { return "\(backend.title) · \(s.title)" }
+        return "\(backend.title) · \(strategyId)"
+    }
+
+    var shortTitle: String {
+        zapretStrategy?.title ?? ciadpiStrategy?.title ?? spoofdpiStrategy?.title ?? strategyId
+    }
+
+    var arguments: [String] {
+        zapretStrategy?.arguments ?? ciadpiStrategy?.arguments ?? spoofdpiStrategy?.arguments ?? []
+    }
+
+    var argumentsLine: String { arguments.joined(separator: " ") }
+
+    var zapretStrategy: ZapretStrategy? {
+        guard backend == .tpws else { return nil }
+        return ZapretStrategy(rawValue: strategyId)
+    }
+
+    var ciadpiStrategy: CiadpiStrategy? {
+        guard backend == .ciadpi else { return nil }
+        return CiadpiStrategy(rawValue: strategyId)
+    }
+
+    var spoofdpiStrategy: SpoofDPIStrategy? {
+        guard backend == .spoofdpi else { return nil }
+        return SpoofDPIStrategy(rawValue: strategyId)
+    }
+
+    static let `default` = DPIProfile(backend: .tpws, strategyId: ZapretStrategy.general.rawValue)
+
+    static func allProfiles() -> [DPIProfile] {
+        var out: [DPIProfile] = []
+        for s in ZapretStrategy.allCases {
+            out.append(DPIProfile(backend: .tpws, strategyId: s.rawValue))
+        }
+        for s in CiadpiStrategy.allCases {
+            out.append(DPIProfile(backend: .ciadpi, strategyId: s.rawValue))
+        }
+        for s in SpoofDPIStrategy.allCases {
+            out.append(DPIProfile(backend: .spoofdpi, strategyId: s.rawValue))
+        }
+        return out
+    }
+
+    static func parseArgumentsLine(_ line: String, backend: DPIBackend) -> [String] {
+        line.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+}

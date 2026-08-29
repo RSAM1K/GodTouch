@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+Touch.app/
+*.swp
+
+# Собираются при ./scripts/build.sh
+vendor/spoofdpi
+vendor/tpws
+vendor/tg-proxy
+vendor/byedpi-src/
+
+# Легаси / не используется
+vendor/wgcf
+vendor/wireguard/
+vendor/amneziawg/
