@@ -219,11 +219,22 @@ enum HostLists {
         return Array(Set(out)).sorted()
     }
 
-    static func pacScript(domains: [String], socksPort: Int) -> String {
+    static func pacScript(domains: [String], socksPort: Int, telegramPort: Int = 1081) -> String {
         var body = """
         function FindProxyForURL(url, host) {
           host = host.toLowerCase();
           if (host == "127.0.0.1" || host == "localhost") return "DIRECT";
+
+          var tg = "SOCKS5 127.0.0.1:\(telegramPort)";
+          if (dnsDomainIs(host, "telegram.org") || shExpMatch(host, "*.telegram.org")) return tg;
+          if (dnsDomainIs(host, "t.me") || shExpMatch(host, "*.t.me")) return tg;
+          if (dnsDomainIs(host, "telegra.ph") || shExpMatch(host, "*.telegra.ph")) return tg;
+          if (shExpMatch(host, "2a0a:f280*")) return tg;
+          if (isInNet(host, "149.154.160.0", "255.255.240.0")) return tg;
+          if (isInNet(host, "91.108.0.0", "255.255.0.0")) return tg;
+          if (isInNet(host, "91.105.192.0", "255.255.254.0")) return tg;
+          if (isInNet(host, "185.76.151.0", "255.255.255.0")) return tg;
+          if (isInNet(host, "95.161.64.0", "255.255.192.0")) return tg;
 
         """
         for d in domains {

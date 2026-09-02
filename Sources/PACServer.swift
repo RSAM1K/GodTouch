@@ -1,8 +1,8 @@
 import Foundation
 import Network
 
-/// Tiny HTTP server for a PAC file — same idea as zapret-macos-easy:
-/// only listed domains go through the DPI SOCKS proxy, everything else is DIRECT.
+/// Tiny HTTP server for a PAC file.
+/// Listed domains → DPI SOCKS :1080; Telegram hosts/IPs → tg-proxy :1081; else DIRECT.
 final class PACServer {
     let port: UInt16 = 9877
     private var listener: NWListener?

@@ -35,17 +35,20 @@ final class TelegramService {
             "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
             "RUST_LOG": "info",
         ]
+        // Telegram DC IPs are blackholed here; WS goes through Cloudflare fronts
+        // (kwsN.cakeisalie.co.uk / fixtelega / pclead / lovetrue). --dc-ip only
+        // picks the hub used if a path still opens raw TCP.
         p.arguments = [
             "--host", "127.0.0.1",
             "--port", String(port),
-            "--dc-ip", "1:149.154.175.50",
+            "--dc-ip", "1:149.154.167.220",
             "--dc-ip", "2:149.154.167.220",
-            "--dc-ip", "3:149.154.175.100",
-            "--dc-ip", "4:149.154.167.91",
-            "--dc-ip", "5:91.108.56.100",
-            "--pool-size", "8",
-            "--connect-timeout", "15",
-            "--pool-max-age", "180",
+            "--dc-ip", "3:149.154.167.220",
+            "--dc-ip", "4:149.154.167.220",
+            "--dc-ip", "5:149.154.167.220",
+            "--pool-size", "0",
+            "--connect-timeout", "8",
+            "--pool-max-age", "90",
         ]
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle(forWritingAtPath: errURL.path)

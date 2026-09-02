@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 /// Telegram IP ranges (used to detect Telegram traffic)
 const TG_RANGES: &[(u32, u32)] = &[
@@ -19,6 +19,51 @@ const fn ip_to_u32(o: [u8; 4]) -> u32 {
 pub fn is_telegram_ip(ip: Ipv4Addr) -> bool {
     let n = u32::from(ip);
     TG_RANGES.iter().any(|&(lo, hi)| n >= lo && n <= hi)
+}
+
+/// Telegram publishes these IPv6 prefixes for DC / media endpoints.
+pub fn is_telegram_ipv6(ip: Ipv6Addr) -> bool {
+    dc_from_ipv6(ip).is_some() || {
+        let s = ip.segments();
+        s[0] == 0x2a0a && s[1] == 0xf280
+    }
+}
+
+/// Map Telegram IPv6 → (dc_id, is_media). Media flag is a weak hint —
+/// MTProto init (`extract_dc`) always wins when present.
+pub fn dc_from_ipv6(ip: Ipv6Addr) -> Option<(u8, bool)> {
+    let s = ip.segments();
+    let is_media = matches!(s[7], 0x000b | 0x000d | 0x010b | 0x010d);
+
+    let dc = if s[0] == 0x2a0a && s[1] == 0xf280 {
+        // 2a0a:f280::/32 — current Telegram IPv6 (Desktop prefers this)
+        2
+    } else if s[0] != 0x2001 {
+        return None;
+    } else if s[1] == 0x067c && s[2] == 0x04e8 {
+        // 2001:67c:4e8:f00X::  — DC2 (f002) / DC4 (f004)
+        match s[3] {
+            0xf002 | 0xf012 | 0xf00a => 2,
+            0xf004 | 0xf014 | 0xf00c => 4,
+            _ => 2,
+        }
+    } else if s[1] == 0x0b28 && s[2] == 0xf23d {
+        // 2001:b28:f23d:f00X:: — DC1 / DC3
+        match s[3] {
+            0xf001 | 0xf011 => 1,
+            0xf003 | 0xf013 => 3,
+            _ => 1,
+        }
+    } else if s[1] == 0x0b28 && s[2] == 0xf23f {
+        // 2001:b28:f23f:f005:: — DC5
+        5
+    } else if s[1] == 0x0b28 && s[2] == 0xf23c {
+        2
+    } else {
+        return None;
+    };
+
+    Some((dc, is_media))
 }
 
 /// Known Telegram DC server IPs mapped to (dc_id, is_media)
@@ -82,18 +127,13 @@ fn dc_from_ip_exact(s: &str) -> Option<(u8, bool)> {
     })
 }
 
-/// Return WebSocket domain candidates for a given DC, ordered by preference.
-/// Media DCs prefer the `-1` variant first.
-pub fn ws_domains(dc: u8, is_media: bool) -> [String; 2] {
-    if is_media {
-        [
-            format!("kws{}-1.web.telegram.org", dc),
-            format!("kws{}.web.telegram.org", dc),
-        ]
-    } else {
-        [
-            format!("kws{}.web.telegram.org", dc),
-            format!("kws{}-1.web.telegram.org", dc),
-        ]
-    }
+/// Community CF fronts only have `kwsN` (not `kwsN-1`). Same origin IP in Flowseal.
+pub fn ws_domains(dc: u8, _is_media: bool) -> [String; 4] {
+    let n = dc.clamp(1, 5);
+    [
+        format!("kws{n}.cakeisalie.co.uk"),
+        format!("kws{n}.fixtelega.co.uk"),
+        format!("kws{n}.pclead.co.uk"),
+        format!("kws{n}.lovetrue.co.uk"),
+    ]
 }

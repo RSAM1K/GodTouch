@@ -164,7 +164,7 @@ final class Engine: ObservableObject {
         guard SystemProxy.autoProxyOurs() else { return }
         status = "Восстанавливаю…"
         let domains = HostLists.load(from: resourceDir)
-        let pacBody = HostLists.pacScript(domains: domains, socksPort: dpi.port)
+        let pacBody = HostLists.pacScript(domains: domains, socksPort: dpi.port, telegramPort: telegram.port)
         let profile = self.profile
         do {
             try dpi.start(profile: profile)
@@ -378,7 +378,7 @@ final class Engine: ObservableObject {
         generation += 1
         let gen = generation
         let domains = HostLists.load(from: resourceDir)
-        let pacBody = HostLists.pacScript(domains: domains, socksPort: dpi.port)
+        let pacBody = HostLists.pacScript(domains: domains, socksPort: dpi.port, telegramPort: telegram.port)
         _ = forceProbe
 
         Task.detached { [dpi, telegram, pac] in
@@ -396,10 +396,8 @@ final class Engine: ObservableObject {
 
                 await Self.setStatus(self, gen, "Telegram…")
                 try telegram.start()
-                TouchSettings.resetTelegramProxyOffer()
-                await MainActor.run {
-                    telegram.offerProxyToTelegram(force: true)
-                }
+                // Don't open tg://socks — Desktop treats custom SOCKS as invalid (-444)
+                // and resets to system proxy. Telegram goes through PAC → :1081 instead.
 
                 let finalProfile = chosen
                 await MainActor.run {
@@ -409,7 +407,7 @@ final class Engine: ObservableObject {
                     self.busy = false
                     self.probing = false
                     self.probeProgress = ""
-                    self.needsTelegramSetup = true
+                    self.needsTelegramSetup = false
                     self.telegramUp = telegram.isRunning
                     self.lastError = nil
                     self.status = self.statusLine(profile: finalProfile)
