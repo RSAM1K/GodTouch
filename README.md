@@ -1,79 +1,73 @@
 <div align="center">
 
+<img src="docs/images/logo.jpg" width="120" alt="God Touch">
+
 # God Touch
 
-**Menubar-приложение для macOS — обход DPI и прокси для Telegram**
+**Menubar для macOS — обход DPI в браузере и отдельный путь для Telegram**
 
-![macOS](https://img.shields.io/badge/macOS-14%2B-000000?style=for-the-badge&logo=apple&logoColor=white)
-![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1–M4-ffb000?style=for-the-badge)
-![Swift](https://img.shields.io/badge/Swift-menubar-F05138?style=for-the-badge&logo=swift&logoColor=white)
+<p>
+  <img src="https://img.shields.io/badge/macOS-14%2B_Sonoma-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Apple_Silicon-M1–M4-FFB000?style=for-the-badge" alt="Apple Silicon">
+  <img src="https://img.shields.io/badge/Swift-UI-F05138?style=for-the-badge&logo=swift&logoColor=white" alt="Swift">
+  <img src="https://img.shields.io/badge/Rust-touchcore-DEA584?style=for-the-badge&logo=rust&logoColor=black" alt="Rust">
+  <img src="https://img.shields.io/github/last-commit/RSAM1K/GodTouch?style=for-the-badge&color=238636" alt="Last commit">
+</p>
 
-Иконка в строке меню → **CONNECT** → YouTube, Discord, Twitch и другие сайты из списка идут через обход DPI.  
-Telegram — отдельный SOCKS-прокси. Остальной трафик — напрямую.
+Иконка в строке меню → **CONNECT** → YouTube, Discord, Twitch и остальное из списка идут через локальный DPI. Telegram — через свой мост. Весь остальной трафик — напрямую.
 
-[Быстрый старт](#-быстрый-старт) · [Установка](#-установка) · [Интерфейс](#-интерфейс) · [Настройка DPI](#-настройка-dpi) · [Под себя](#-настройка-под-себя) · [FAQ](#-частые-проблемы)
+[Быстрый старт](#-быстрый-старт) · [Установка](#-установка) · [Интерфейс](#-интерфейс) · [DPI](#-настройка-dpi) · [Telegram](#-telegram) · [FAQ](#-faq)
 
 </div>
+
+<p align="center">
+  <img src="docs/images/banner.jpg" width="920" alt="God Touch — CRT-панель в menubar">
+</p>
 
 ---
 
 <img src="docs/images/flow.svg" alt="Установить → CONNECT → SCAN → Пользуйся" width="100%">
 
-## Содержание
-
-- [Быстрый старт](#-быстрый-старт)
-- [Установка](#-установка)
-- [Интерфейс](#-интерфейс)
-- [Настройка DPI](#-настройка-dpi)
-- [Настройка под себя](#-настройка-под-себя)
-- [Архитектура](#-архитектура)
-- [Ветки репозитория](#-ветки-репозитория)
-- [Частые проблемы](#-частые-проблемы)
-
----
-
 ## ⚡ Быстрый старт
 
-> **30 секунд:** menubar → **CONNECT** → **CFG** → **SCAN** → готово.
-
-### Чеклист
-
-- [ ] `Touch.app` установлен в `/Applications`
-- [ ] Иконка в menubar, приложение запущено
-- [ ] Нажал **CONNECT** — в статусе `ENG: …`
-- [ ] **CFG → SCAN** — подобрана стратегия
-- [ ] Telegram подключил SOCKS `127.0.0.1:1081`
-- [ ] В браузере включён Secure DNS (DoH)
-
-### Иконка в menubar
-
-| Состояние | Вид |
-|-----------|-----|
-| Выключено | серая CRT-иконка |
-| CONNECT активен | янтарная иконка со искрой |
-
-### Что делает Touch
+> **30 секунд:** menubar → **CONNECT** → пароль Mac → **CFG → SCAN**.
 
 | | |
-|---|---|
-| Обход DPI | YouTube, Discord, Twitch и др. из списка доменов |
-| SOCKS `:1080` | DPI-движок для браузера |
-| PAC `:9877` | Только нужные домены → прокси, остальное — напрямую |
-| SOCKS `:1081` | Отдельный прокси для Telegram Desktop |
-| Фон | Работает в menubar, не трогает весь трафик |
+| :--- | :--- |
+| **1** | `Touch.app` в `/Applications` |
+| **2** | Янтарная CRT-иконка в menubar |
+| **3** | В статусе `ENG: touchcore · …` |
+| **4** | **CFG → SCAN** подбирает быструю рабочую стратегию |
+| **5** | В Telegram — **системные настройки прокси**, без своего SOCKS |
+| **6** | В браузере включён Secure DNS (DoH) |
+
+<p align="center">
+  <img src="docs/images/panel.jpg" width="360" alt="Главная панель — CONNECT, CFG, PING, QUIT">
+  &nbsp;&nbsp;
+  <img src="docs/images/cfg.jpg" width="360" alt="CFG — стратегия, SCAN, PING">
+</p>
+
+### Что реально идёт через Touch
+
+| Трафик | Путь | Порт |
+| :--- | :--- | :--- |
+| YouTube, Discord, Twitch, списки | PAC → DPI (`touchcore` / tpws / …) | `1080` |
+| Telegram Desktop | PAC → `tg-proxy` → Cloudflare WS | `1081` |
+| Всё остальное | Напрямую | — |
+
+Touch **не** гоняет весь Mac через прокси. PAC на `:9877` отправляет в SOCKS только домены из списков и CIDR Telegram.
 
 ### Требования
 
 - macOS **14+** (Sonoma и новее)
-- **Apple Silicon** (M1 / M2 / M3 / M4)
-- Интернет при первой сборке (~15 мин)
-- Xcode CLT, Homebrew, Go, Rust
+- **Apple Silicon** (M1–M4)
+- Первая сборка с интернетом (~15 мин): Xcode CLT, Homebrew, Go, Rust
 
 ---
 
 ## 📦 Установка
 
-### Шаг 1 — инструменты (один раз)
+### 1. Инструменты (один раз)
 
 ```bash
 xcode-select --install
@@ -81,7 +75,7 @@ xcode-select --install
 brew install go rust
 ```
 
-### Шаг 2 — скачать и собрать
+### 2. Клонировать и собрать
 
 ```bash
 git clone https://github.com/RSAM1K/GodTouch.git
@@ -90,10 +84,9 @@ chmod +x scripts/build.sh
 ./scripts/build.sh
 ```
 
-> Первая сборка долгая — скрипт сам скачает и соберёт `tpws`, `spoofdpi`, `tg-proxy`.  
-> Результат: **`/Applications/Touch.app`**
+Первый запуск собирает `touchcore`, `tpws`, `spoofdpi`, `tg-proxy`. Результат: **`/Applications/Touch.app`**.
 
-### Шаг 3 — запуск
+### 3. Запуск
 
 ```bash
 open /Applications/Touch.app
@@ -102,149 +95,136 @@ open /Applications/Touch.app
 ### Обновление
 
 ```bash
-cd ~/Projects/GodTouch   # или твой путь
 git pull
 ./scripts/build.sh
 ```
 
 ### Удаление
 
-1. **DISCONNECT** → **EXIT** в панели
+1. **DISCONNECT** → **QUIT**
 2. Удали `/Applications/Touch.app`
-3. Системные настройки → Сеть → убери авто-прокси, если остался
+3. Системные настройки → Сеть → выключи авто-прокси, если остался `127.0.0.1:9877`
 
 ---
 
 ## 🖥 Интерфейс
 
-### Главная панель
+Компактная CRT-панель: янтарный моноширинный текст, фосфорный арт, без иконки в Dock.
 
-<img src="docs/images/main-panel.svg" alt="Главная панель God Touch" width="268" align="left" style="margin-right: 24px;">
+| Кнопка | Что делает |
+| :--- | :--- |
+| **CONNECT / DISCONNECT** | Запускает DPI + PAC + Telegram. macOS спросит пароль админа. |
+| **CFG** | Стратегия, SCAN, автозапуск, CONNECT при старте |
+| **PING** | YouTube, Google, Discord, Twitch, Telegram |
+| **QUIT** | Отключает и выходит |
 
-| | Элемент | Описание |
-|---|---------|----------|
-| **1** | God Touch | Заголовок, версия справа |
-| **2** | Терминал-арт | `ENG: tpws · general` — активный движок. `TG ✓` — Telegram жив |
-| **3** | CONNECT | Включает / выключает всё. Во время работы — **ABORT** |
-| **4** | CFG | Настройки: стратегия, SCAN, PING, автозапуск |
-| **5** | EXIT | Выключает и закрывает приложение |
-| **6** | TG proxy pending | Telegram не настроен → нажми **OPEN** |
+Иконка в menubar: тусклая янтарная — выкл, яркая со искрой — связь есть.
 
-<br clear="all">
+<details>
+<summary>Схема двух экранов</summary>
 
-### Панель CFG
+<p>
+<img src="docs/images/main-panel.svg" width="268" alt="Главная панель">
+<img src="docs/images/cfg-panel.svg" width="320" alt="Панель CFG">
+</p>
 
-<img src="docs/images/cfg-panel.svg" alt="Панель настроек CFG" width="320" align="left" style="margin-right: 24px;">
-
-| | Раздел | Описание |
-|---|--------|----------|
-| **A** | СИСТЕМА | Запуск при входе, CONNECT при старте |
-| **B** | АВТО | Режим по умолчанию — SCAN подбирает стратегию |
-| **C** | SCAN | ~20 комбинаций движков, сохраняет лучшую |
-| **D** | PING | YouTube, Google, Discord, Twitch, Telegram |
-| **E** | ВРУЧНУЮ | Пресеты и свои флаги — для опытных |
-| **F** | SAVE / BACK | Сохранить или вернуться |
-
-<br clear="all">
+</details>
 
 ---
 
 ## ⚙️ Настройка DPI
 
-> **Правило:** сначала **CONNECT**, потом **SCAN**. Без CONNECT движок выключен.
+> **SCAN** работает только при включённом **CONNECT**.
 
-### Режим АВТО (рекомендуется)
+### АВТО (рекомендуется)
 
 ```
 CONNECT  →  CFG → SCAN  →  SAVE
 ```
 
-SCAN проверяет каждую комбинацию на YouTube + Google и выбирает самую быструю рабочую.  
-Результат: `Сохранена: tpws · tlsrec-midsld`
+SCAN перебирает ~20 комбинаций движка и флагов на YouTube + Google и сохраняет самую быструю рабочую. По умолчанию — **touchcore** (нативный Rust). Если проба падает, Touch может откатиться на эквивалент **tpws**.
 
-### Режим ВРУЧНУЮ
+### ВРУЧНУЮ
 
-**CFG → СТРАТЕГИЯ → ВРУЧНУЮ** → выбери пресет → отредактируй флаги → **SAVE**
+**CFG → СТРАТЕГИЯ → ВРУЧНУЮ** → пресет → флаги → **SAVE**.
 
-| Движок | Когда пробовать | Примеры пресетов |
-|--------|-----------------|------------------|
+| Движок | Когда пробовать | Примеры |
+| :--- | :--- | :--- |
+| **touchcore** | По умолчанию — split / disorder / tlsrec | `combo-midsld`, `combo-sni` |
 | **tpws** | Классика zapret, часто лучший на Wi‑Fi | `tlsrec-midsld`, `ALT`, `general` |
-| **ciadpi** | Если tpws не тянет YouTube | `disorder-sni`, `split-1` |
-| **spoofdpi** | Альтернатива на мобильном хотспоте | `chunk-1`, `split-sni` |
+| **ciadpi** | YouTube не тянет на tpws | `disorder-sni`, `split-1` |
+| **spoofdpi** | Мобильный хотспот | `chunk-1`, `split-sni` |
 
-> Кнопка **[ СБРОС ]** сбрасывает стратегию и возвращает АВТО. После сброса — снова SCAN.
+**[ СБРОС ]** сбрасывает стратегию в АВТО. После — снова SCAN.
 
-### PING — проверка сайтов
+### PING
 
-| Сайт | ✓ значит | ✗ значит |
-|------|----------|----------|
+| Сайт | ✓ | ✗ |
+| :--- | :--- | :--- |
 | YouTube | Видео грузится | Другой пресет или SCAN |
-| Google | Базовая связность | Провайдер режет жёстче |
-| Discord | Голос / чат | Manual + disorder |
-| Twitch | Стримы | Проверь DNS в браузере |
-| Telegram | TG-прокси жив | Переподключи SOCKS |
-
-### Системные опции
-
-| Опция | Что делает |
-|-------|------------|
-| **Запуск при входе** | Touch стартует с macOS (нужно разрешение в Объектах входа) |
-| **CONNECT при старте** | Через ~0.6 с сам включает обход |
+| Google | Базовая связность | Жёсткий фильтр провайдера |
+| Discord | Чат / голос | ВРУЧНУЮ + disorder |
+| Twitch | Стримы | Проверь DoH в браузере |
+| Telegram | `tg-proxy` жив | CONNECT + системный прокси в TG |
 
 ---
 
-## 🎛 Настройка под себя
+## 📱 Telegram
 
-### Telegram
+В Telegram Desktop **не** включай свой SOCKS `127.0.0.1:1081`. Клиент проверяет MTProto, падает с *-444* и сбрасывает на «системный прокси».
 
-После **CONNECT** Telegram Desktop спросит: подключить SOCKS `127.0.0.1:1081`?  
-Нажми **Подключить**. Пропустил — в панели **TG proxy pending** → **OPEN**.
+Touch уже разводит Telegram через PAC:
+
+1. **CONNECT** (пароль один раз)
+2. В Telegram: **Использовать системные настройки прокси**
+3. **IPv6 выключить**
+4. Свой SOCKS `127.0.0.1:1081` **не** включать
+
+Чат идёт через Cloudflare WebSocket. Прямые IP дата-центров Telegram у многих провайдеров в чёрной дыре — это нормально.
+
+---
+
+## 🎛 Под себя
 
 ### Браузер — Secure DNS
 
-Без DoH провайдер может резать по DNS ещё до прокси.
+Без DoH провайдер может резать по DNS ещё до PAC.
 
-| Браузер | Где | DoH |
-|---------|-----|-----|
-| Chrome | Настройки → Конфиденциальность → Безопасный DNS | `https://dns.google/dns-query` |
-| Firefox | Настройки → Сеть → DNS через HTTPS | Google / Cloudflare |
+| Браузер | Где | Резолвер |
+| :--- | :--- | :--- |
+| Chrome | Конфиденциальность → Безопасный DNS | `https://dns.google/dns-query` |
+| Firefox | Сеть → DNS через HTTPS | Google / Cloudflare |
 | Safari | Системные настройки → Сеть → DNS | `1.1.1.1` или `8.8.8.8` |
 
-### Свой список сайтов
+### Свои списки сайтов
 
-Файлы в `Resources/lists/`:
-
-```
-list-general.txt   — Discord, Instagram, Telegram…
-list-google.txt    — YouTube, Google, CDN
-```
-
-**Формат:**
+`Resources/lists/`
 
 ```
-discord.com       # обычный домен
-^dns.google       # ^ = точное совпадение
-# комментарий     # строки с # игнорируются
+list-general.txt   # Discord, Instagram, …
+list-google.txt    # YouTube, Google, CDN
 ```
 
-**После правки:**
-
-```bash
-./scripts/build.sh
-# перезапусти Touch
 ```
+discord.com       # суффикс
+^dns.google       # точное совпадение
+# комментарий
+```
+
+Потом `./scripts/build.sh` и перезапуск Touch.
 
 ### Свои флаги DPI
 
-**CFG → ВРУЧНУЮ** → движок → поле флагов → **SAVE**
+**CFG → ВРУЧНУЮ** → движок → флаги → **SAVE**
 
 | Движок | Пример |
-|--------|--------|
+| :--- | :--- |
+| touchcore | `--split-pos midsld --disorder --tlsrec midsld` |
 | tpws | `--split-pos=1 --tlsrec=midsld` |
-| ciadpi | `-d 1+s` или `-r 1+s` |
+| ciadpi | `-d 1+s` |
 | spoofdpi | `--https-chunk-size 1` |
 
-> Не смешивай `--oob` и `--disorder` в tpws. Сломал — **[ СБРОС ]** и SCAN заново.
+В tpws не смешивай `--oob` и `--disorder`. Сломал — **СБРОС** + SCAN.
 
 ---
 
@@ -252,99 +232,94 @@ discord.com       # обычный домен
 
 ```mermaid
 flowchart LR
-    subgraph Browser["Браузер"]
-        B[Safari / Chrome / Firefox]
+    subgraph Apps["Приложения"]
+      B[Браузер]
+      T[Telegram Desktop]
     end
 
-    subgraph Touch["God Touch"]
-        PAC["PAC :9877"]
-        DPI["tpws / ciadpi / spoofdpi\nSOCKS :1080"]
-        TG["tg-proxy\nSOCKS :1081"]
+    subgraph GodTouch["God Touch"]
+      PAC["PAC :9877"]
+      DPI["touchcore / tpws\nSOCKS :1080"]
+      TG["tg-proxy\nSOCKS :1081"]
     end
 
-    B -->|"домен из списка"| PAC
-    PAC --> DPI
-    DPI --> Internet((Интернет))
-    TG --> Internet
-    B -->|"остальное"| Internet
-
-    TGApp[Telegram Desktop] --> TG
+    B -->|"домены из списка"| PAC --> DPI --> Net((Интернет))
+    B -->|"остальное"| Net
+    T -->|"системный PAC"| PAC
+    PAC -->|"telegram.org / CIDR TG"| TG --> CF[Cloudflare WS] --> Net
 ```
 
-| Порт | Сервис | Назначение |
-|------|--------|------------|
-| `1080` | tpws / ciadpi / spoofdpi | SOCKS для браузера через PAC |
-| `1081` | tg-proxy | SOCKS только для Telegram |
-| `9877` | PAC-сервер | Какие домены идут в прокси |
+| Порт | Процесс | Роль |
+| :--- | :--- | :--- |
+| `1080` | touchcore / tpws / ciadpi / spoofdpi | DPI SOCKS для списков |
+| `1081` | tg-proxy | Telegram → WebSocket-фронты |
+| `9877` | PAC | Список → 1080, Telegram → 1081, иначе DIRECT |
 
 ---
 
-## 🌿 Ветки репозитория
+## 🌿 Ветки
 
 | Ветка | Назначение |
-|-------|------------|
-| `main` | Стабильная версия |
-| `beta` | Тестовые изменения |
+| :--- | :--- |
+| `main` | Стабильная |
+| `beta` | Эксперименты |
 
 ```bash
-git checkout beta    # тестируешь здесь
-git push
-
-git checkout main
-git merge beta       # когда готово
-git push
+git checkout beta
+# …правки…
+git checkout main && git merge --ff-only beta && git push
 ```
 
 ---
 
-## ❓ Частые проблемы
+## ❓ FAQ
 
 <details>
 <summary><strong>YouTube не открывается</strong></summary>
 
-CONNECT включён? → **CFG → PING** — смотри YT. Если ✗ — SCAN заново или ВРУЧНУЮ другой движок. Проверь Secure DNS в браузере.
+CONNECT включён? **PING** по YT. Если ✗ — SCAN заново или другой движок в ВРУЧНУЮ. Включи Secure DNS.
 
 </details>
 
 <details>
-<summary><strong>SCAN долго / ничего не нашёл</strong></summary>
+<summary><strong>SCAN ничего не нашёл</strong></summary>
 
-Убедись что **CONNECT** активен до SCAN. Если все стратегии ✗ — попробуй другую сеть (мобильный хотспот).
-
-</details>
-
-<details>
-<summary><strong>PING пишет «Сначала CONNECT»</strong></summary>
-
-Нажми **CONNECT**, подожди 2–3 сек, снова **PING**.
+Сначала **CONNECT**. Если все стратегии ✗ — попробуй мобильный хотспот, у другого провайдера отпечаток другой.
 
 </details>
 
 <details>
-<summary><strong>Telegram не коннектится</strong></summary>
+<summary><strong>Telegram мёртв / «прокси будет отключён»</strong></summary>
 
-**CONNECT** → в TG: SOCKS5 `127.0.0.1:1081`. Или **OPEN** в панели если видишь `TG proxy pending`.
+Это Desktop отвергает **кастомный** SOCKS. Оставь **системный прокси**. Не жми на `127.0.0.1:1081`. Переподключи Touch.
 
 </details>
 
 <details>
-<summary><strong>GitHub / сайт ломается при CONNECT</strong></summary>
+<summary><strong>Видео в Telegram медленное</strong></summary>
 
-Некоторые сайты (например GitHub) не нужно гонять через DPI-прокси — они ломают JS. Touch не проксирует GitHub по умолчанию. Если добавил домен в список сам — убери и пересобери.
+Чат и медиа идут через Cloudflare. YouTube — ближайший CDN Google через DPI; TG-видео так не едет. Скорость как у YouTube не будет.
+
+</details>
+
+<details>
+<summary><strong>GitHub / сайт ломается после CONNECT</strong></summary>
+
+Не добавляй домен в `list-*.txt`. GitHub в списках по умолчанию нет.
 
 </details>
 
 <details>
 <summary><strong>build.sh падает</strong></summary>
 
-Проверь: `xcode-select -p`, `brew --version`, `go version`, `rustup`. Удали `vendor/tpws` и запусти build снова.
+Проверь: `xcode-select -p`, `brew --version`, `go version`, `rustc --version`. Удали `vendor/tpws` и собери снова.
 
 </details>
 
 <details>
-<summary><strong>Иконка серая, хотя включал</strong></summary>
+<summary><strong>Иконка серая после перезагрузки</strong></summary>
 
-Touch перезапустился. Открой панель → **CONNECT**. Включи «CONNECT при старте» в CFG.
+Включи **CONNECT при старте** в CFG или нажми CONNECT вручную.
 
 </details>
 
@@ -352,6 +327,8 @@ Touch перезапустился. Открой панель → **CONNECT**. �
 
 <div align="center">
 
-**God Touch** · macOS menubar · DPI bypass + Telegram proxy
+<img src="docs/images/logo.jpg" width="56" alt="">
+
+**God Touch** · menubar · DPI + Telegram
 
 </div>

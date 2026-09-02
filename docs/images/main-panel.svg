@@ -1,16 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 268 220">
-  <rect width="268" height="220" fill="#0a0a0a" rx="8" stroke="#30363d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 268 248" role="img" aria-label="God Touch main panel">
+  <rect width="268" height="248" fill="#0a0a0a" rx="8" stroke="#ffb000" stroke-opacity="0.22"/>
   <rect width="268" height="22" fill="#000"/>
-  <text x="12" y="15" fill="#ffb000" font-size="11" font-family="ui-monospace,Menlo,monospace" font-weight="bold">God Touch</text>
-  <text x="238" y="15" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace" opacity="0.6">v0.1</text>
-  <rect x="8" y="28" width="252" height="100" fill="#161b22" stroke="#30363d" stroke-width="0.5"/>
-  <text x="16" y="48" fill="#8cf273" font-size="8" font-family="ui-monospace,Menlo,monospace">&gt; LINK ESTABLISHED</text>
-  <text x="16" y="62" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace" opacity="0.9">ENG: tpws · general</text>
-  <text x="16" y="76" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace" opacity="0.9">TG </text>
-  <rect x="12" y="138" width="244" height="26" fill="#ffb000" rx="3"/>
-  <text x="134" y="155" text-anchor="middle" fill="#000" font-size="10" font-family="ui-monospace,Menlo,monospace" font-weight="bold">[ DISCONNECT ]</text>
-  <rect x="12" y="172" width="118" height="24" fill="#000" stroke="#ffb000" stroke-width="0.8" rx="3"/>
-  <text x="71" y="188" text-anchor="middle" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace">[ CFG ]</text>
-  <rect x="138" y="172" width="118" height="24" fill="#000" stroke="#ffb000" stroke-width="0.8" rx="3"/>
-  <text x="197" y="188" text-anchor="middle" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace">[ EXIT ]</text>
+  <text x="12" y="15" fill="#ffb000" font-size="11" font-family="ui-monospace,Menlo,monospace" font-weight="700">God Touch</text>
+  <text x="232" y="15" fill="#b87a00" font-size="8" font-family="ui-monospace,Menlo,monospace">v0.1</text>
+  <rect x="8" y="28" width="252" height="118" fill="#000" stroke="#ffb000" stroke-opacity="0.12"/>
+  <text x="16" y="44" fill="#ffb000" font-size="7.5" font-family="ui-monospace,Menlo,monospace" font-weight="700">&gt; LINK_INTERFACE</text>
+  <text x="148" y="44" fill="#ffb000" font-size="6.5" font-family="ui-monospace,Menlo,monospace">STATUS: CONNECTED</text>
+  <circle cx="246" cy="41" r="3" fill="#ffb000"/>
+  <rect x="18" y="52" width="232" height="72" fill="#050505"/>
+  <text x="134" y="88" text-anchor="middle" fill="#8cf273" font-size="9" font-family="ui-monospace,Menlo,monospace">[ hands linked ]</text>
+  <text x="16" y="138" fill="#8cf273" font-size="7.5" font-family="ui-monospace,Menlo,monospace">ENG: touchcore · combo-midsld</text>
+  <rect x="12" y="154" width="244" height="26" fill="#ffb000" rx="3"/>
+  <text x="134" y="171" text-anchor="middle" fill="#000" font-size="10" font-family="ui-monospace,Menlo,monospace" font-weight="700">[ DISCONNECT ]</text>
+  <rect x="12" y="188" width="76" height="24" fill="#000" stroke="#ffb000" rx="3"/>
+  <text x="50" y="204" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ CFG ]</text>
+  <rect x="96" y="188" width="76" height="24" fill="#000" stroke="#ffb000" rx="3"/>
+  <text x="134" y="204" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ PING ]</text>
+  <rect x="180" y="188" width="76" height="24" fill="#000" stroke="#ffb000" rx="3"/>
+  <text x="218" y="204" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ QUIT ]</text>
+  <text x="16" y="232" fill="#9aa195" font-size="7.5" font-family="ui-monospace,Menlo,monospace">YouTube  142ms  ?</text>
 </svg>

@@ -1,28 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 280">
-  <rect width="320" height="280" fill="#0a0a0a" rx="8" stroke="#30363d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 300" role="img" aria-label="God Touch CFG panel">
+  <rect width="320" height="300" fill="#0a0a0a" rx="8" stroke="#ffb000" stroke-opacity="0.22"/>
   <rect width="320" height="28" fill="#000"/>
-  <text x="12" y="18" fill="#ffb000" font-size="11" font-family="ui-monospace,Menlo,monospace" font-weight="bold">&gt; CONFIG</text>
-  <text x="280" y="18" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace" opacity="0.5">CFG</text>
-  <rect x="10" y="36" width="300" height="52" fill="#161b22" stroke="#30363d" stroke-width="0.5" rx="3"/>
-  <text x="18" y="52" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace" font-weight="bold">!!"</text>
-  <text x="18" y="68" fill="#9aa195" font-size="8" font-family="ui-monospace,Menlo,monospace">0?CA: ?@8 2E>45</text>
-  <rect x="250" y="58" width="36" height="16" fill="#ffb000" rx="2"/>
-  <text x="268" y="70" text-anchor="middle" fill="#000" font-size="7" font-family="ui-monospace,Menlo,monospace">ON</text>
-  <rect x="10" y="96" width="300" height="130" fill="#161b22" stroke="#30363d" stroke-width="0.5" rx="3"/>
-  <text x="18" y="112" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace" font-weight="bold">!" "/ DPI</text>
-  <rect x="18" y="118" width="52" height="18" fill="#ffb000" rx="2"/>
-  <text x="44" y="130" text-anchor="middle" fill="#000" font-size="7" font-family="ui-monospace,Menlo,monospace">"</text>
-  <rect x="76" y="118" width="68" height="18" fill="#000" stroke="#ffb000" stroke-width="0.6" rx="2"/>
-  <text x="110" y="130" text-anchor="middle" fill="#ffb000" font-size="7" font-family="ui-monospace,Menlo,monospace"> #'#.</text>
-  <text x="18" y="150" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">!>E@0=5=0: tpws · tlsrec-midsld</text>
-  <rect x="18" y="158" width="72" height="20" fill="#000" stroke="#ffb000" stroke-width="0.8" rx="2"/>
-  <text x="54" y="172" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ SCAN ]</text>
-  <rect x="98" y="158" width="72" height="20" fill="#000" stroke="#ffb000" stroke-width="0.8" rx="2"/>
-  <text x="134" y="172" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ PING ]</text>
-  <text x="18" y="200" fill="#9aa195" font-size="7" font-family="ui-monospace,Menlo,monospace">YouTube  142ms  </text>
-  <text x="18" y="214" fill="#9aa195" font-size="7" font-family="ui-monospace,Menlo,monospace">Discord   89ms  </text>
-  <rect x="12" y="248" width="140" height="24" fill="#ffb000" rx="3"/>
-  <text x="82" y="264" text-anchor="middle" fill="#000" font-size="9" font-family="ui-monospace,Menlo,monospace" font-weight="bold">[ SAVE ]</text>
-  <rect x="168" y="248" width="140" height="24" fill="#000" stroke="#ffb000" stroke-width="0.8" rx="3"/>
-  <text x="238" y="264" text-anchor="middle" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace">[ BACK ]</text>
+  <text x="12" y="18" fill="#ffb000" font-size="12" font-family="ui-monospace,Menlo,monospace" font-weight="700">&gt; CONFIG</text>
+  <text x="284" y="18" fill="#b87a00" font-size="9" font-family="ui-monospace,Menlo,monospace">CFG</text>
+  <rect x="10" y="36" width="300" height="48" fill="#000" stroke="#ffb000" stroke-opacity="0.12" rx="3"/>
+  <text x="18" y="52" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace" font-weight="700">SYSTEM</text>
+  <text x="18" y="68" fill="#9aa195" font-size="8" font-family="ui-monospace,Menlo,monospace">Launch at login · auto CONNECT</text>
+  <rect x="256" y="54" width="40" height="16" fill="#ffb000" rx="2"/>
+  <text x="276" y="66" text-anchor="middle" fill="#000" font-size="7" font-family="ui-monospace,Menlo,monospace">ON</text>
+  <rect x="10" y="92" width="300" height="148" fill="#000" stroke="#ffb000" stroke-opacity="0.12" rx="3"/>
+  <text x="18" y="110" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace" font-weight="700">DPI STRATEGY</text>
+  <rect x="18" y="120" width="52" height="18" fill="#ffb000" rx="2"/>
+  <text x="44" y="133" text-anchor="middle" fill="#000" font-size="7" font-family="ui-monospace,Menlo,monospace">AUTO</text>
+  <rect x="76" y="120" width="72" height="18" fill="#000" stroke="#ffb000" rx="2"/>
+  <text x="112" y="133" text-anchor="middle" fill="#ffb000" font-size="7" font-family="ui-monospace,Menlo,monospace">MANUAL</text>
+  <text x="18" y="156" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">touchcore · combo-midsld</text>
+  <rect x="18" y="166" width="72" height="20" fill="#000" stroke="#ffb000" rx="2"/>
+  <text x="54" y="180" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ SCAN ]</text>
+  <rect x="98" y="166" width="72" height="20" fill="#000" stroke="#ffb000" rx="2"/>
+  <text x="134" y="180" text-anchor="middle" fill="#ffb000" font-size="8" font-family="ui-monospace,Menlo,monospace">[ PING ]</text>
+  <text x="18" y="208" fill="#9aa195" font-size="7.5" font-family="ui-monospace,Menlo,monospace">YouTube   142ms  ?</text>
+  <text x="18" y="222" fill="#9aa195" font-size="7.5" font-family="ui-monospace,Menlo,monospace">Discord    89ms  ?</text>
+  <rect x="12" y="264" width="140" height="24" fill="#ffb000" rx="3"/>
+  <text x="82" y="280" text-anchor="middle" fill="#000" font-size="9" font-family="ui-monospace,Menlo,monospace" font-weight="700">[ SAVE ]</text>
+  <rect x="168" y="264" width="140" height="24" fill="#000" stroke="#ffb000" rx="3"/>
+  <text x="238" y="280" text-anchor="middle" fill="#ffb000" font-size="9" font-family="ui-monospace,Menlo,monospace">[ BACK ]</text>
 </svg>
