@@ -188,6 +188,7 @@ enum TouchSettings {
     }
 
     private static let tgProxyKey = "touch.telegramProxyOffered"
+    private static let tgSystemHintKey = "touch.telegramSystemHintShown"
 
     static var telegramProxyOffered: Bool {
         UserDefaults.standard.bool(forKey: tgProxyKey)
@@ -199,6 +200,14 @@ enum TouchSettings {
 
     static func resetTelegramProxyOffer() {
         UserDefaults.standard.removeObject(forKey: tgProxyKey)
+    }
+
+    static var telegramSystemHintShown: Bool {
+        UserDefaults.standard.bool(forKey: tgSystemHintKey)
+    }
+
+    static func markTelegramSystemHintShown() {
+        UserDefaults.standard.set(true, forKey: tgSystemHintKey)
     }
 }
 

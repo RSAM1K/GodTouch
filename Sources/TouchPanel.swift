@@ -107,6 +107,15 @@ struct TouchPanelView: View {
                 }
             }
 
+            if engine.isOn && !engine.busy {
+                Text("TG: системный прокси · YT: CFG→SCAN")
+                    .font(CRT.mono(7.5))
+                    .foregroundStyle(CRT.amberDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
             if !pingRows.isEmpty || pingError != nil {
                 homePingBlock
             }

@@ -1,6 +1,30 @@
 import Foundation
 
 enum SystemProxy {
+    /// All real network services (Wi‑Fi, Ethernet, Thunderbolt, …) — not just the
+    /// default route. On another Mac the active interface is often not "Wi-Fi",
+    /// so enabling PAC only on the default service leaves YouTube/TG unbroken.
+    static func hardwareServices() -> [String] {
+        let ports = shell("networksetup -listallhardwareports")
+        var names: [String] = []
+        var current: String?
+        for line in ports.split(separator: "\n").map(String.init) {
+            if line.hasPrefix("Hardware Port: ") {
+                current = String(line.dropFirst("Hardware Port: ".count))
+            } else if line.hasPrefix("Device: "), let name = current {
+                let device = String(line.dropFirst("Device: ".count))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                // Skip bridges / virtual junk that networksetup still lists.
+                if device.hasPrefix("en") || device.hasPrefix("eth") {
+                    names.append(name)
+                }
+                current = nil
+            }
+        }
+        if names.isEmpty { return [defaultService()] }
+        return Array(Set(names)).sorted()
+    }
+
     static func defaultService() -> String {
         let iface = shell("route -n get default 2>/dev/null | awk '/interface:/{print $2}'")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -19,30 +43,45 @@ enum SystemProxy {
     }
 
     static func autoProxyOurs() -> Bool {
-        let out = shell("networksetup -getautoproxyurl \(q(defaultService()))")
-        return out.contains("Enabled: Yes") && out.contains("127.0.0.1:9877")
+        hardwareServices().contains { service in
+            let out = shell("networksetup -getautoproxyurl \(q(service))")
+            return out.contains("Enabled: Yes") && out.contains("127.0.0.1:9877")
+        }
     }
 
     static func enablePAC(_ url: String) throws {
-        let service = defaultService()
-        try runAdmin("""
-        networksetup -setautoproxyurl \(q(service)) \(q(url))
-        networksetup -setautoproxystate \(q(service)) on
-        networksetup -setsocksfirewallproxystate \(q(service)) off
-        networksetup -setwebproxystate \(q(service)) off
-        networksetup -setsecurewebproxystate \(q(service)) off
-        """)
+        let services = hardwareServices()
+        var lines: [String] = []
+        for service in services {
+            lines.append("networksetup -setautoproxyurl \(q(service)) \(q(url))")
+            lines.append("networksetup -setautoproxystate \(q(service)) on")
+            lines.append("networksetup -setsocksfirewallproxystate \(q(service)) off")
+            lines.append("networksetup -setwebproxystate \(q(service)) off")
+            lines.append("networksetup -setsecurewebproxystate \(q(service)) off")
+        }
+        try runAdmin(lines.joined(separator: "\n"))
+
+        // osascript can succeed while a service silently ignores PAC — verify.
+        Thread.sleep(forTimeInterval: 0.25)
+        guard autoProxyOurs() else {
+            throw NSError(domain: "Touch", code: 125, userInfo: [
+                NSLocalizedDescriptionKey:
+                    "PAC не включился (\(services.joined(separator: ", "))). Проверь пароль Mac и Сеть."
+            ])
+        }
     }
 
     static func disableAll() throws {
-        let service = defaultService()
-        try runAdmin("""
-        networksetup -setautoproxystate \(q(service)) off
-        networksetup -setsocksfirewallproxystate \(q(service)) off
-        networksetup -setsocksfirewallproxy \(q(service)) '' 0
-        networksetup -setwebproxystate \(q(service)) off
-        networksetup -setsecurewebproxystate \(q(service)) off
-        """)
+        let services = hardwareServices()
+        var lines: [String] = []
+        for service in services {
+            lines.append("networksetup -setautoproxystate \(q(service)) off")
+            lines.append("networksetup -setsocksfirewallproxystate \(q(service)) off")
+            lines.append("networksetup -setsocksfirewallproxy \(q(service)) '' 0")
+            lines.append("networksetup -setwebproxystate \(q(service)) off")
+            lines.append("networksetup -setsecurewebproxystate \(q(service)) off")
+        }
+        try runAdmin(lines.joined(separator: "\n"))
     }
 
     private static func q(_ s: String) -> String {
@@ -81,7 +120,7 @@ enum SystemProxy {
         if !Proc.wait(p, timeout: 90) {
             Proc.forceKill(p)
             throw NSError(domain: "Touch", code: 124, userInfo: [
-                NSLocalizedDescriptionKey: "Ждал пароль слишком долго. Нажми Включить ещё раз и введи пароль Mac."
+                NSLocalizedDescriptionKey: "Ждал пароль слишком долго. Нажми CONNECT ещё раз и введи пароль Mac."
             ])
         }
         if p.terminationStatus != 0 {
