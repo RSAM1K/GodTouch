@@ -3,19 +3,37 @@ import SwiftUI
 
 @main
 struct TouchApp: App {
-    @StateObject private var engine = Engine()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         AppSingleton.enforce()
     }
 
     var body: some Scene {
-        MenuBarExtra {
-            TouchPanelView(engine: engine)
-                .transaction { $0.animation = nil }
-        } label: {
-            MenuBarLabel(connected: engine.isOn)
+        // Agent (LSUIElement): no Dock window. Panel lives on NSStatusItem.
+        Settings {
+            EmptyView()
         }
-        .menuBarExtraStyle(.window)
+    }
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let engine = Engine()
+    private var statusItem: StatusItemController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+        let controller = StatusItemController(engine: engine)
+        controller.install()
+        statusItem = controller
+    }
+
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        statusItem?.togglePanel()
+        return false
     }
 }

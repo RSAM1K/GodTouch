@@ -42,7 +42,10 @@ struct TouchPanelView: View {
             }
         }
         .frame(width: PanelMetrics.width)
+        // Hug content, but never animate size — MenuBarExtra repositions on
+        // every height change and the popup looks like it rides up/down.
         .fixedSize(horizontal: true, vertical: true)
+        .transaction { $0.animation = nil }
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)

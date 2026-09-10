@@ -80,7 +80,13 @@ enum MenuBarIcon {
 struct MenuBarLabel: View {
   let connected: Bool
 
+  /// Cache once — regenerating NSImage every body pass makes the
+  /// status item resize and the MenuBarExtra window jump under it.
+  private static let onImage = MenuBarIcon.image(connected: true)
+  private static let offImage = MenuBarIcon.image(connected: false)
+
   var body: some View {
-    Image(nsImage: MenuBarIcon.image(connected: connected))
+    Image(nsImage: connected ? Self.onImage : Self.offImage)
+      .frame(width: 18, height: 18)
   }
 }
