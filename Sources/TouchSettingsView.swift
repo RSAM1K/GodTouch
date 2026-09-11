@@ -446,7 +446,7 @@ struct TouchSettingsView: View {
             if let warning = warnings.first {
                 errorText = warning
             }
-            flashSaved()
+            onBack()
         } catch {
             errorText = error.localizedDescription
         }

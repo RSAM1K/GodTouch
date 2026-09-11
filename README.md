@@ -61,7 +61,8 @@ Touch **не** гоняет весь Mac через прокси. PAC на `:987
 
 - macOS **14+** (Sonoma и новее)
 - **Apple Silicon** (M1–M4)
-- Первая сборка с интернетом (~15 мин): Xcode CLT, Homebrew, Go, Rust
+- Первая сборка с интернетом (~10–20 мин): Xcode CLT, Homebrew (`go`, `rust`, `python`)
+- После Homebrew: `eval "$(/opt/homebrew/bin/brew shellenv)"` (иначе `brew`/`cargo` «не находятся»)
 
 ### Назначение
 
@@ -71,15 +72,42 @@ Touch **не** гоняет весь Mac через прокси. PAC на `:987
 
 ## 📦 Установка
 
-### 1. Инструменты (один раз)
+Нужны: **Apple Silicon (M1–M4)**, macOS **14+**, интернет на первую сборку (~10–20 мин).
+
+### 1. Xcode Command Line Tools
 
 ```bash
 xcode-select --install
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install go rust
+# дождись окончания установки, затем проверь:
+xcode-select -p
+# должно быть: /Library/Developer/CommandLineTools  (или путь к Xcode)
 ```
 
-### 2. Клонировать и собрать
+### 2. Homebrew + Go + Rust
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+После установки Homebrew **обязательно** подключи его в PATH (на Apple Silicon):
+
+```bash
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install go rust python
+```
+
+Проверка:
+
+```bash
+brew --version
+go version
+rustc --version
+python3 --version
+swiftc --version
+```
+
+### 3. Клонировать и собрать
 
 ```bash
 git clone https://github.com/RSAM1K/GodTouch.git
@@ -88,20 +116,37 @@ chmod +x scripts/build.sh
 ./scripts/build.sh
 ```
 
-Первый запуск собирает `touchcore`, `tpws`, `spoofdpi`, `tg-proxy`. Результат: **`/Applications/Touch.app`**.
+Скрипт сам соберёт `touchcore`, `tpws`, `spoofdpi`, `ciadpi`, `tg-proxy` и поставит **`/Applications/Touch.app`**.
 
-### 3. Запуск
+### 4. Запуск
 
 ```bash
 open /Applications/Touch.app
 ```
 
+В menubar появится янтарная CRT-иконка → **CONNECT** → пароль Mac → **CFG → SCAN**.
+
 ### Обновление
 
 ```bash
+cd GodTouch   # путь к клону
 git pull
 ./scripts/build.sh
 ```
+
+### Если `./scripts/build.sh` упал
+
+1. Убедись, что `brew`, `go`, `rustc`, `python3`, `swiftc` находятся в PATH (шаг 2).
+2. Сбрось битые кэши в `/tmp` и собери снова:
+
+```bash
+rm -rf /tmp/tg-proxy /tmp/zapret /tmp/SpoofDPI /tmp/byedpi /tmp/Touch-build.app
+cd GodTouch
+./scripts/build.sh
+```
+
+3. Intel Mac (x86_64) **не поддерживается** — только arm64.
+4. Нет прав на `/Applications` — запусти сборку из обычного пользователя с доступом к папке Applications.
 
 ### Удаление
 
@@ -315,7 +360,9 @@ CONNECT включён? **PING** по YT. Если ✗ — SCAN заново и�
 <details>
 <summary><strong>build.sh падает</strong></summary>
 
-Проверь: `xcode-select -p`, `brew --version`, `go version`, `rustc --version`. Удали `vendor/tpws` и собери снова.
+1. `eval "$(/opt/homebrew/bin/brew shellenv)"` и проверь `go` / `rustc` / `python3` / `swiftc`.
+2. `rm -rf /tmp/tg-proxy /tmp/zapret /tmp/SpoofDPI /tmp/byedpi` и снова `./scripts/build.sh`.
+3. Только Apple Silicon. CLT: `xcode-select --install`.
 
 </details>
 
