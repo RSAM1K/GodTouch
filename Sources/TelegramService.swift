@@ -73,10 +73,10 @@ final class TelegramService {
         _ = waitUntilPortFreeQuiet(timeout: 1.0)
     }
 
-    /// Opens Telegram to apply SOCKS proxy via deep link.
+    /// Opens Telegram Desktop proxy confirm dialog (tg://socks).
     func offerProxyToTelegram(force: Bool = false) {
         if !force, TouchSettings.telegramProxyOffered { return }
-        let url = URL(string: "tg://socks?server=127.0.0.1&port=\(port)")!
+        guard let url = URL(string: "tg://socks?server=127.0.0.1&port=\(port)") else { return }
         NSWorkspace.shared.open(url)
         TouchSettings.markTelegramProxyOffered()
     }

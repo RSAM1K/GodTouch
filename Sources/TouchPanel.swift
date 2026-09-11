@@ -108,7 +108,7 @@ struct TouchPanelView: View {
             }
 
             if engine.isOn && !engine.busy {
-                Text("TG: системный прокси · YT: CFG→SCAN")
+                Text("TG: подтверди прокси в окне · YT: CFG→SCAN")
                     .font(CRT.mono(7.5))
                     .foregroundStyle(CRT.amberDim)
                     .frame(maxWidth: .infinity, alignment: .leading)

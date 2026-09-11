@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import Combine
 
@@ -397,8 +396,9 @@ final class Engine: ObservableObject {
 
                 await Self.setStatus(self, gen, "Telegram…")
                 try telegram.start()
-                // Don't open tg://socks — Desktop treats custom SOCKS as invalid (-444)
-                // and resets to system proxy. Telegram goes through PAC → :1081 instead.
+                // Open tg://socks so Desktop shows the proxy confirm dialog.
+                // PAC stays on as fallback: if Desktop rejects custom SOCKS (-444)
+                // and snaps to «system proxy», traffic still hits tg-proxy via PAC.
 
                 let finalProfile = chosen
                 await MainActor.run {
@@ -412,7 +412,11 @@ final class Engine: ObservableObject {
                     self.telegramUp = telegram.isRunning
                     self.lastError = nil
                     self.status = self.statusLine(profile: finalProfile)
-                    Self.presentTelegramSystemHintIfNeeded()
+                    // Slight delay so password sheet / panel settle, then TG dialog.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [telegram] in
+                        guard self.isOn else { return }
+                        telegram.offerProxyToTelegram(force: true)
+                    }
                 }
             } catch {
                 dpi.stop()
@@ -462,27 +466,6 @@ final class Engine: ObservableObject {
             return "Работает · \(profile.backend.title) · custom"
         }
         return "Работает · \(profile.title)"
-    }
-
-    /// Deep-link `tg://socks` ломает Desktop (-444). Подсказываем системный прокси один раз.
-    private static func presentTelegramSystemHintIfNeeded() {
-        guard !TouchSettings.telegramSystemHintShown else { return }
-        TouchSettings.markTelegramSystemHintShown()
-        let alert = NSAlert()
-        alert.messageText = "Telegram — системный прокси"
-        alert.informativeText = """
-        Окно SOCKS из Telegram больше не открываем: клиент сам его сбрасывает.
-
-        В Telegram Desktop:
-        1. Настройки → Дополнительно → Тип соединения
-        2. «Использовать системные настройки прокси»
-        3. IPv6 — выключить
-
-        YouTube не грузится → CFG → SCAN.
-        """
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
     }
 
     private static func setStatus(_ engine: Engine, _ gen: Int, _ text: String) async {
