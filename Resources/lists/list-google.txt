@@ -1,3 +1,4 @@
+# YouTube / Google media (синхрон с Flowseal lists/list-google.txt, 2026-09-20)
 yt3.ggpht.com
 yt4.ggpht.com
 yt3.googleusercontent.com
@@ -17,4 +18,6 @@ yt-video-upload.l.google.com
 ytimg.com
 ytimg.l.google.com
 play.google.com
+fonts.googleapis.com
+www.gstatic.com
 google.ru

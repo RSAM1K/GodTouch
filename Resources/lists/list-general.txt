@@ -1,3 +1,4 @@
+# DNS / DoH (точные хосты)
 ^dns.google
 ^dns.quad9.net
 ^dns.nextdns.io
@@ -6,6 +7,8 @@
 ^freedns.controld.com
 ^wikimedia-dns.org
 ^cloudflare-dns.com
+
+# Cloudflare
 cloudflare-ech.com
 encryptedsni.com
 cloudflareaccess.com
@@ -24,6 +27,8 @@ cloudflarestorage.com
 cloudflarestream.com
 cloudflaretest.com
 cloudfront.net
+
+# Discord
 dis.gd
 discord-attachments-uploads-prd.storage.googleapis.com
 discord.app
@@ -49,6 +54,8 @@ discordsays.com
 discordsez.com
 discordstatus.com
 zendesk.com
+
+# Twitch / emotes / стримы (live-video — CDN Twitch)
 frankerfacez.com
 ffzap.com
 betterttv.net
@@ -57,6 +64,12 @@ betterttv.net
 localizeapi.com
 klipy.com
 live-video.net
+twitch.tv
+ttvnw.net
+jtvnw.net
+twitchcdn.net
+
+# Соцсети (локальное расширение; в Flowseal сейчас нет)
 medium.com
 instagram.com
 cdninstagram.com

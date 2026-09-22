@@ -194,11 +194,11 @@ SCAN перебирает ~20 комбинаций движка и параме�
 
 ### Свои списки сайтов
 
-`Resources/lists/`
+`Resources/lists/` (база синхронизирована с [Flowseal lists](https://github.com/Flowseal/zapret-discord-youtube/tree/main/lists)):
 
 ```
-list-general.txt   # Discord, Instagram, …
-list-google.txt    # YouTube, Google, CDN
+list-general.txt   # Discord, Cloudflare, Twitch, соцсети…
+list-google.txt    # YouTube / Google CDN (+ fonts/gstatic)
 ```
 
 ```
