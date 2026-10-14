@@ -147,9 +147,9 @@ SCAN перебирает ~20 комбинаций движка и параме�
 
 | Движок | Когда пробовать | Примеры |
 | :--- | :--- | :--- |
-| **touchcore** | По умолчанию — тонкая настройка TLS на macOS | `combo-midsld`, `combo-sni` |
-| **tpws** | Часто лучший на домашнем Wi‑Fi | `tlsrec-midsld`, `ALT`, `general` |
-| **ciadpi** | Медиа нестабильно на tpws | `disorder-sni`, `split-1` |
+| **touchcore** | По умолчанию — тонкая настройка TLS на macOS | `combo-midsld`, `flow-general`, `flow-alt7` |
+| **tpws** | Часто лучший на домашнем Wi‑Fi | `general`, `ALT5`, `ALT2`, `disorder-midsld` |
+| **ciadpi** | Медиа нестабильно на tpws | `disorder-sni`, `split+disorder` |
 | **spoofdpi** | Мобильный хотспот | `chunk-1`, `split-sni` |
 
 **[ СБРОС ]** возвращает стратегию в АВТО. После — снова SCAN.

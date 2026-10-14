@@ -6,12 +6,16 @@ enum DPIFallback {
         guard profile.backend == .touchcore,
               let core = profile.touchcoreStrategy else { return nil }
         let zapret: ZapretStrategy? = switch core {
-        case .comboMidsld, .disorderMidsld, .tlsrecMidsld, .splitMidsld:
-            .tlsrecMidsld
-        case .comboSni, .disorderSni, .splitSni, .multiSniMidsld:
+        case .comboMidsld, .disorderMidsld, .tlsrecMidsld, .splitMidsld, .comboSplit2:
+            .alt5
+        case .comboSni, .disorderSni, .splitSni, .multiSniMidsld, .flowAlt7:
             .disorderMidsld
-        case .disorder1, .split1, .split2, .tlsrec1:
+        case .flowGeneral, .tlsrec1:
             .general
+        case .flowAlt2, .split2:
+            .alt2
+        case .disorder1, .split1:
+            .alt6
         case .oob1:
             .oobMidsld
         }

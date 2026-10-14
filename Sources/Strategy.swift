@@ -1,12 +1,17 @@
 import Foundation
 
-/// tpws strategies inspired by Flowseal/zapret-discord-youtube and zapret-macos-easy.
+/// tpws strategies inspired by Flowseal/zapret-discord-youtube (2026 ALT/general).
+/// SOCKS-mode approximations of winws multisplit/fake — not 1:1 packet desync.
 /// Do not combine --oob and --disorder in one strategy.
 enum ZapretStrategy: String, CaseIterable, Identifiable, Codable {
     case general
     case alt
     case alt2
     case alt3
+    case alt4
+    case alt5
+    case alt6
+    case alt7
     case simple
     case oobMidsld
     case disorderMidsld
@@ -21,6 +26,10 @@ enum ZapretStrategy: String, CaseIterable, Identifiable, Codable {
         case .alt: return "ALT"
         case .alt2: return "ALT2"
         case .alt3: return "ALT3"
+        case .alt4: return "ALT4"
+        case .alt5: return "ALT5"
+        case .alt6: return "ALT6"
+        case .alt7: return "ALT7"
         case .simple: return "simple"
         case .oobMidsld: return "oob-midsld"
         case .disorderMidsld: return "disorder-midsld"
@@ -33,13 +42,23 @@ enum ZapretStrategy: String, CaseIterable, Identifiable, Codable {
     var arguments: [String] {
         switch self {
         case .general:
-            return ["--split-pos=1", "--disorder", "--tlsrec=1"]
+            // Flowseal general / ALT6 ≈ multisplit @1 + TLS record split
+            return ["--split-pos=1", "--tlsrec=midsld"]
         case .alt:
             return ["--split-pos=1", "--oob"]
         case .alt2:
-            return ["--split-pos=1", "--tlsrec=1"]
+            // Flowseal ALT2 ≈ multisplit @2
+            return ["--split-pos=2"]
         case .alt3:
             return ["--split-pos=1", "--disorder"]
+        case .alt4:
+            return ["--split-pos=2", "--disorder"]
+        case .alt5:
+            return ["--split-pos=midsld", "--disorder", "--tlsrec=midsld"]
+        case .alt6:
+            return ["--split-pos=1"]
+        case .alt7:
+            return ["--split-pos=midsld", "--tlsrec=midsld"]
         case .simple:
             return ["--split-pos=1"]
         case .oobMidsld:

@@ -1,4 +1,4 @@
-# YouTube / Google media (синхрон с Flowseal lists/list-google.txt, 2026-09-20)
+# YouTube / Google media (синхрон с Flowseal lists/list-google.txt, 2026-10)
 yt3.ggpht.com
 yt4.ggpht.com
 yt3.googleusercontent.com

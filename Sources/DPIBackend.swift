@@ -98,20 +98,21 @@ enum SpoofDPIStrategy: String, CaseIterable, Identifiable, Codable {
     }
 
     var arguments: [String] {
+        // SpoofDPI ≥1.x: --https-split-mode (was --https-split-default)
         switch self {
         case .chunk1:
-            return ["--https-split-default", "chunk", "--https-chunk-size", "1"]
+            return ["--https-split-mode", "chunk", "--https-chunk-size", "1"]
         case .chunk2:
-            return ["--https-split-default", "chunk", "--https-chunk-size", "2"]
+            return ["--https-split-mode", "chunk", "--https-chunk-size", "2"]
         case .chunk3:
-            return ["--https-split-default", "chunk", "--https-chunk-size", "3"]
+            return ["--https-split-mode", "chunk", "--https-chunk-size", "3"]
         case .chunk1Fake:
             return [
-                "--https-split-default", "chunk", "--https-chunk-size", "1",
+                "--https-split-mode", "chunk", "--https-chunk-size", "1",
                 "--https-fake-count", "1"
             ]
         case .splitSni:
-            return ["--https-split-default", "sni"]
+            return ["--https-split-mode", "sni"]
         }
     }
 }
@@ -121,6 +122,10 @@ enum TouchCoreStrategy: String, CaseIterable, Identifiable, Codable {
     case comboMidsld
     case comboSni
     case multiSniMidsld
+    case comboSplit2
+    case flowGeneral
+    case flowAlt2
+    case flowAlt7
     case split1
     case split2
     case splitSni
@@ -139,6 +144,10 @@ enum TouchCoreStrategy: String, CaseIterable, Identifiable, Codable {
         case .comboMidsld: return "combo-midsld"
         case .comboSni: return "combo-sni"
         case .multiSniMidsld: return "multi-sni-midsld"
+        case .comboSplit2: return "combo-split2"
+        case .flowGeneral: return "flow-general"
+        case .flowAlt2: return "flow-alt2"
+        case .flowAlt7: return "flow-alt7"
         case .split1: return "split-1"
         case .split2: return "split-2"
         case .splitSni: return "split-sni"
@@ -160,6 +169,17 @@ enum TouchCoreStrategy: String, CaseIterable, Identifiable, Codable {
             return ["--split", "sni", "--disorder", "--tlsrec", "midsld"]
         case .multiSniMidsld:
             return ["--split-pos", "sni,midsld", "--disorder", "--tlsrec", "midsld"]
+        case .comboSplit2:
+            return ["--split-pos", "2", "--disorder", "--tlsrec", "midsld"]
+        case .flowGeneral:
+            // Flowseal general / ALT6 — multisplit @1 + tlsrec
+            return ["--split", "1", "--tlsrec", "midsld"]
+        case .flowAlt2:
+            // Flowseal ALT2 — multisplit @2
+            return ["--split", "2"]
+        case .flowAlt7:
+            // Flowseal ALT7-ish — split near SNI + early byte
+            return ["--split-pos", "2,sni", "--disorder"]
         case .split1:
             return ["--split", "1"]
         case .split2:
@@ -249,20 +269,29 @@ struct DPIProfile: Codable, Identifiable, Equatable, Hashable {
         return out
     }
 
-    /// Fast SCAN order — likely winners first; full list only if none work.
+    /// Fast SCAN order — Flowseal-2026 winners + proven macOS combos first.
     static func scanProfiles() -> [DPIProfile] {
         let picks: [(DPIBackend, String)] = [
             (.touchcore, TouchCoreStrategy.comboMidsld.rawValue),
+            (.touchcore, TouchCoreStrategy.flowGeneral.rawValue),
+            (.touchcore, TouchCoreStrategy.comboSplit2.rawValue),
+            (.touchcore, TouchCoreStrategy.flowAlt7.rawValue),
             (.touchcore, TouchCoreStrategy.disorderMidsld.rawValue),
             (.touchcore, TouchCoreStrategy.comboSni.rawValue),
             (.touchcore, TouchCoreStrategy.multiSniMidsld.rawValue),
+            (.touchcore, TouchCoreStrategy.flowAlt2.rawValue),
+            (.tpws, ZapretStrategy.general.rawValue),
+            (.tpws, ZapretStrategy.alt5.rawValue),
+            (.tpws, ZapretStrategy.alt7.rawValue),
             (.tpws, ZapretStrategy.disorderMidsld.rawValue),
+            (.tpws, ZapretStrategy.alt2.rawValue),
+            (.tpws, ZapretStrategy.alt4.rawValue),
             (.tpws, ZapretStrategy.tlsrecMidsld.rawValue),
             (.tpws, ZapretStrategy.alt.rawValue),
-            (.tpws, ZapretStrategy.alt2.rawValue),
-            (.tpws, ZapretStrategy.general.rawValue),
             (.ciadpi, CiadpiStrategy.disorderSni.rawValue),
+            (.ciadpi, CiadpiStrategy.splitDisorder.rawValue),
             (.spoofdpi, SpoofDPIStrategy.chunk1.rawValue),
+            (.spoofdpi, SpoofDPIStrategy.splitSni.rawValue),
         ]
         return picks.map { DPIProfile(backend: $0.0, strategyId: $0.1) }
     }
